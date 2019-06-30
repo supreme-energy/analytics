@@ -12,7 +12,6 @@ urlpatterns = [
     path('api/edrdrilled/', include('edrs.api.urls.edrdrilled')),
     path('api/edrprocessed/', include('edrs.api.urls.edrprocessed')),
     path('api/edrraw/', include('edrs.api.urls.edrraw')),
-    path('api/edrscoutmotor/', include('edrs.api.urls.edrscoutmotor')),
     path('api/edrtrip/', include('edrs.api.urls.edrtrip')),
     path('api/formations/', include('jobs.api.urls.formations')),
     path('api/intervals/', include('jobs.api.urls.intervals')),

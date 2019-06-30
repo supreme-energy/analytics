@@ -5,7 +5,7 @@ import sqlite3
 from datetime import date
 os.chdir(os.getcwd())
 
-from totco_mapper import edrmapper
+from edr_mapper import edrmapper
 from edr_bulk_cleaner import cleanitup,trippedit
 from edr_bulk_drilling import drillitup,SlideSheet,finish_bhas
 from cxns import connectit
@@ -26,13 +26,11 @@ con =sqlite3.connect(os.path.join(BASE_DIR, 'astra\db.sqlite3'))
 pdate = date.today() 
 
 #rom edr_loader import edrloads
-RIG_ID = 6419
-DATA_FREQUENCY = 5
-RIG_NAME = "H&P 625"
-ANIMO_RIGID = 6
-WELL_UID="9ebf6c8b-4f5a-4acc-a732-0ada2a08bb89"
-WellName="Apollo 2-11-4N 12H"
-job_ID = "9"
+DATA_FREQUENCY = 10
+RIG_NAME = "Rig 1"
+WELL_UID="6ab0ff9b-de84-412b-a69c-e784ea3a7951"
+WellName="Clydesdale 3H"
+job_ID = "1"
 VSPlane =181
 
 
@@ -49,8 +47,8 @@ def sql_fetch(con):
     
         if not wellconnector:
             print("New Well Connection")
-            cursorObj.execute("INSERT INTO jobs_wellconnector (uid, well_name, rig_name, data_frequency, job_id, rig_id) VALUES (?, ?, ?, ?, ?, ?)", 
-                              (WELL_UID,WellName,RIG_NAME,DATA_FREQUENCY,job_ID,ANIMO_RIGID))
+            cursorObj.execute("INSERT INTO jobs_wellconnector (uid, well_name, rig_name, data_frequency, job_id) VALUES (?, ?, ?, ?, ?)", 
+                              (WELL_UID,WellName,RIG_NAME,DATA_FREQUENCY,job_ID))
             con.commit()
         else:
             print("This Data Feed Exists")
@@ -58,8 +56,8 @@ def sql_fetch(con):
         cursorObj.execute("SELECT id,name,start_depth,end_depth,hole_size FROM jobs_interval WHERE job_id = (?)", (job_ID,))
         intervals = pd.DataFrame(cursorObj.fetchall(),columns = ['id','name','start_depth','end_depth','hole_size'])
 
-        cursorObj.execute("SELECT id,name,bha_number,bha_length,depth_in,depth_out,time_in,time_out,hole_size,interval FROM bhas_bha WHERE job_id = (?)", (job_ID,))
-        bhas = pd.DataFrame(cursorObj.fetchall(),columns=['id','name','bha_number','bha_length','depth_in','depth_out','time_in','time_out','hole_size','interval'])
+        cursorObj.execute("SELECT id,bha_number,bha_length,depth_in,depth_out,time_in,time_out,hole_size FROM bhas_bha WHERE job_id = (?)", (job_ID,))
+        bhas = pd.DataFrame(cursorObj.fetchall(),columns=['id','bha_number','bha_length','depth_in','depth_out','time_in','time_out','hole_size'])
         
     else:
         print("Animo Doesn't Know this Well")
@@ -90,7 +88,12 @@ def sql_loadraw(con,edrdata):
         
     cursorObj.execute("SELECT id,rig_time FROM edrs_edrraw WHERE uid = (?)", (WELL_UID,))
     rawid = pd.DataFrame(cursorObj.fetchall(),columns = ['edr_raw_id','rig_time'])
-    edrdata=pd.merge(edrdata,rawid, on='rig_time')
+    try:
+        edrdata=pd.merge(edrdata,rawid, on='rig_time')
+    except:
+        rawid['rig_time']=pd.to_datetime(rawid['rig_time'])
+        edrdata=pd.merge(edrdata,rawid, on='rig_time')
+
 
     return edrdata
 
@@ -99,7 +102,7 @@ def sql_loadproc(con,processed_data):
     
     cursorObj.execute("SELECT * FROM edrs_edrprocessed WHERE uid = (?)", (WELL_UID,))
     well_edrproc = cursorObj.fetchall()
-    processed_data= processed_data[['job_id','uid','creation_date','edr_raw_id','data_gap', 'time_elapsed', 'day_num', 'day_night', 'bit_status', 'slip_status', 'block_status', 'pump_status', 'trip_status', 'trip_status2', 'rot_sli', 'rig_activity', 'rig_activity2', 'clean_1', 'clean_2', 'clean_3','trip_in_number','trip_out_number']]
+    processed_data= processed_data[['uid','creation_date','edr_raw_id','data_gap', 'time_elapsed', 'day_num', 'day_night', 'bit_status', 'slip_status', 'block_status', 'pump_status', 'trip_status', 'trip_status2', 'rot_sli', 'rig_activity', 'rig_activity2', 'clean_1', 'clean_2', 'clean_3','trip_in_number','trip_out_number']]
     
     
     if not well_edrproc:
@@ -117,7 +120,7 @@ def sql_loadtrip(con,tripping):
     
     cursorObj.execute("SELECT * FROM edrs_edrtrip WHERE uid = (?)", (WELL_UID,))
     well_trip = cursorObj.fetchall()
-    tripping= tripping[['job_id','uid','creation_date','trip_direction','depth','start_time','end_time','bha_time', 'trip_count','casing','bha_id','interval_id','edr_proc_id']]
+    tripping= tripping[['uid','creation_date','trip_direction','depth','start_time','end_time','bha_time', 'trip_count','casing','bha_id','interval_id','edr_raw_id']]
     
     
     if not well_trip:
@@ -152,7 +155,7 @@ def sql_loadcxn(con,connections):
     
     cursorObj.execute("SELECT * FROM edrs_edrcxn WHERE uid = (?)", (WELL_UID,))
     well_edrcxn = cursorObj.fetchall()
-    connections= connections[['job_id','uid','creation_date','cxn_count','day_night', 'total_time', 'btm_slips', 'slips_slips', 'slips_btm', 'pump_cycles','pumps_pumps','edr_raw_id']]
+    connections= connections[['uid','creation_date','cxn_count','day_night', 'total_time', 'btm_slips', 'slips_slips', 'slips_btm', 'pump_cycles','pumps_pumps','edr_raw_id']]
     
     
     if not well_edrcxn:

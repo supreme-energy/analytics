@@ -106,7 +106,7 @@ def trippedit(edrdata,DATA_FREQUENCY,bhas,intervals):
     prev_depth =0
     bhaid = None
     intervalid = None
-    tripping =pd.DataFrame(columns =['trip_direction','depth','start_time','end_time', 'trip_points', 'trip_count', 'trip_style','casing','bha_id','interval_id','bha_time','edr_proc_id'])
+    tripping =pd.DataFrame(columns =['trip_direction','depth','start_time','end_time', 'total_time','trip_points', 'trip_count', 'trip_style','casing','bha_id','interval_id','bha_time','edr_raw_id'])
     bhas_trips =pd.DataFrame(columns =['status', 'bha_number', 'depth_in', 'depth_out', 'time_in', 'time_out','is_template','objective'])
     edrdata["trip_in_number"]=0
     edrdata["trip_out_number"]=0      
@@ -150,6 +150,7 @@ def trippedit(edrdata,DATA_FREQUENCY,bhas,intervals):
                         
             start_time=current_trip["rig_time"].min()
             end_time =current_trip["rig_time"].max()
+            total_time =(end_time-start_time).total_seconds()/3600
             trip_points = len(current_trip)
             trip_number=j
             if current_trip["bit_depth"].min()< .1*depth:
@@ -176,7 +177,7 @@ def trippedit(edrdata,DATA_FREQUENCY,bhas,intervals):
             if intervalid1 is not None:
                 intervalid =intervalid1
             
-            arow2 =[direction,depth,start_time,end_time,trip_points,trip_number, trip_style,casing,bhaid,intervalid,bha_time,edr_raw]
+            arow2 =[direction,depth,start_time,end_time,total_time,trip_points,trip_number, trip_style,casing,bhaid,intervalid,bha_time,edr_raw]
             tripping.loc[len(tripping)] = arow2
             edrdata['trip_in_number']= list(map(lambda x,y: (trip_number if x>=start_time and x<=end_time else y),edrdata['rig_time'],edrdata['trip_in_number']))
             
@@ -219,6 +220,7 @@ def trippedit(edrdata,DATA_FREQUENCY,bhas,intervals):
                         intervalid1=intervals.loc[i,'id']
             start_time=current_trip["rig_time"].min()
             end_time =current_trip["rig_time"].max()
+            total_time =(end_time-start_time).total_seconds()/3600
             trip_points = len(current_trip)
             trip_number=j
             if intervalid1 is not None:
@@ -229,7 +231,7 @@ def trippedit(edrdata,DATA_FREQUENCY,bhas,intervals):
                 trip_style="Short Trip"
             j =j+1
             
-            arow2 =[direction,depth,start_time,end_time,trip_points,trip_number, trip_style,casing,bhaid,intervalid,bha_time,edr_raw]
+            arow2 =[direction,depth,start_time,end_time,total_time,trip_points,trip_number, trip_style,casing,bhaid,intervalid,bha_time,edr_raw]
             tripping.loc[len(tripping)] = arow2
             edrdata['trip_out_number']= list(map(lambda x,y: (trip_number if x>=start_time and x<=end_time else y),edrdata['rig_time'],edrdata['trip_out_number']))
     
@@ -251,7 +253,7 @@ def trippedit(edrdata,DATA_FREQUENCY,bhas,intervals):
                 start_time=mintrip_time
                 end_time=tripping.loc[row,'end_time']
                 start_depth=mintrip_depth
-                end_depth= tripping.loc[row,'hole_depth']
+                end_depth= tripping.loc[row,'depth']
                 
                 arow =[ status, bha_number, start_depth, end_depth, start_time, end_time,is_template,objective,]
                 bhas_trips.loc[len(bhas_trips)] = arow
@@ -263,7 +265,7 @@ def trippedit(edrdata,DATA_FREQUENCY,bhas,intervals):
             
             elif tripping.loc[row,'trip_direction']==True:
                 start_time = tripping.loc[row,'start_time']
-                start_depth= tripping.loc[row,'hole_depth']
+                start_depth= tripping.loc[row,'depth']
                 
             elif tripping.loc[row,'trip_direction']=="Out" and start_depth > 0:
                 end_time=tripping.loc[row,'end_time']
@@ -275,5 +277,5 @@ def trippedit(edrdata,DATA_FREQUENCY,bhas,intervals):
                 bha_number = bha_number +1
         bhas = bhas_trips
     
-    
+    tripping['total_time']=tripping['total_time'].round(decimals = 3)
     return tripping,bhas, edrdata

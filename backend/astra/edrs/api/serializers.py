@@ -1,7 +1,7 @@
 from rest_framework import serializers, status
 from bhas.models import Bha
 from jobs.models import Job, Interval, Formation, WellConnector
-from edrs.models import (EDRRaw, EDRScoutMotor, EDRProcessed,
+from edrs.models import (EDRRaw, EDRProcessed,
                          EDRCXN, EDRComment, EDRTrip, EDRDrilled)
 from surveys.models import Survey
 import json
@@ -42,25 +42,6 @@ class EDRProcessedSerializer(serializers.ModelSerializer):
         fields = '__all__'
         read_only_field = ('id',)
 
-
-class EDRScoutMotorSerializer(serializers.ModelSerializer):
-    # job = serializers.SlugRelatedField(
-    #     queryset=Job.objects.all(), slug_field='id')
-    interval = serializers.SlugRelatedField(
-        queryset=Interval.objects.all(), slug_field='id')
-    formation = serializers.SlugRelatedField(
-        queryset=Formation.objects.all(), slug_field='id')
-    bha = serializers.SlugRelatedField(
-        queryset=Bha.objects.all(), slug_field='id')
-    edrraw = serializers.SlugRelatedField(
-        queryset=EDRRaw.objects.all(), slug_field='id')
-    edrprocessed = serializers.SlugRelatedField(
-        queryset=EDRProcessed.objects.all(), slug_field='id')
-
-    class Meta:
-        model = EDRScoutMotor
-        fields = '__all__'
-        read_only_field = ('id',)
 
 
 class EDRDrilledSerializer(serializers.ModelSerializer):

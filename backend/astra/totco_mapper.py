@@ -106,5 +106,92 @@ def edrmapper(edrdata):
            pass 
         else:
             edrdata['oscillator']=False
+            
+            
+    if 'YYYY/MM/DD' in edrdata.columns:
+        edrdata=edrdata.rename(index=str, columns={'Date Time':'rig_time', 'Hole Depth (feet)':'hole_depth', 'True Vertical Depth (feet)':'tvd', 'Bit Depth (feet)':'bit_depth', 'Weight on Bit (klbs)':'wob', 'Rotary RPM (RPM)':'td_rpm', 'Rotary Torque (unitless)':'td_torque', 'Differential Pressure (psi)':'diff_press', 'Overall ROP (ft_per_hr)':'rop_a', 'Total Pump Output (gal_per_min)':'flow_in', 'Standpipe Pressure (psi)':'pump_press', 'Pump Total Strokes Rate (SPM)':'strokes_total', 'Block Height (feet)':'block_height', 'Hook Load (klbs)':'hookload', 'Over Pull (klbs)':'overpull', 'Gamma (api)':'gamma_ray', 'Gravity Toolface (degrees)':'tf_grav', 'Magnetic Toolface (degrees)':'tf_mag', 'Azimuth (degrees)':'svy_azi', 'Inclination (degrees)':'svy_inc'})
+        try:
+            edrdata=edrdata.rename(columns={'EDR Instantaneous ROP (ft_per_hr)':'rop_i'})
+        except:
+            pass
+        try:
+            edrdata=edrdata.rename(columns={'Flow Out Rate':'flow_out'})
+        except:
+            pass
+        edrdata=edrdata.rename(columns={'Ann Pressure':'ann_press'})
+        if 'ann_press' in edrdata.columns:
+           pass 
+        else:
+            edrdata['ann_press']=None
+
+        edrdata=edrdata.rename(columns={'Back Pressure':'back_press'})
+        if 'back_press' in edrdata.columns:
+           pass 
+        else:
+            edrdata['back_press']=None
+        try:
+            edrdata=edrdata.rename(columns={'Live Inc':'live_inc'})
+        except:
+            pass
+        try:
+            edrdata=edrdata.rename(columns={'Basic MSE':'edr_mse'})
+        except:
+            pass
+        try:
+            edrdata=edrdata.rename(columns={'ROP - Auto Driller':'AD_ROP'})
+        except:
+            pass
+        try:
+            edrdata=edrdata.rename(columns={'Bit Wt. - Auto Driller':'AD_WOB'})
+        except:
+            pass
+
+        edrdata=edrdata.rename(columns={'Mud Temp In':'mud_ti'})
+        if 'mud_ti' in edrdata.columns:
+           pass 
+        else:
+            edrdata['mud_ti']=None
+        edrdata=edrdata.rename(columns={'Mud Temp Out':'mud_to'})
+        if 'mud_to' in edrdata.columns:
+           pass 
+        else:
+            edrdata['mud_to']=None
+        edrdata=edrdata.rename(columns={'Mud Weight In':'mud_wi'})
+        if 'mud_wi' in edrdata.columns:
+           pass 
+        else:
+            edrdata['mud_wi']=None
+        edrdata=edrdata.rename(columns={'Mud Weight Out':'mud_wo'})
+        if 'mud_wo' in edrdata.columns:
+           pass 
+        else:
+            edrdata['mud_wo']=None
+            
+        edrdata=edrdata.rename(columns={'Rig Activity':'edr_RS1'})
+        if 'edr_RS1' in edrdata.columns:
+           pass 
+        else:
+            edrdata['edr_RS1']=None
+        edrdata=edrdata.rename(columns={'Rig Activity Code':'edr_RS2'})
+        if 'edr_RS2' in edrdata.columns:
+           pass 
+        else:
+            edrdata['edr_RS2']=None
+        edrdata=edrdata.rename(columns={'Rig Activity SubCode':'edr_RS3'})
+        if 'edr_RS3' in edrdata.columns:
+           pass 
+        else:
+            edrdata['edr_RS3']=None
+        edrdata=edrdata.rename(columns={'Slip Status':'edr_slips'})
+        if 'edr_slips' in edrdata.columns:
+           pass 
+        else:
+            edrdata['edr_slips']=False
+            
+        if 'oscillator' in edrdata.columns:
+           pass 
+        else:
+            edrdata['oscillator']=False
+
 
     return edrdata

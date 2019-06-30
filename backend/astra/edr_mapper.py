@@ -1,169 +1,207 @@
-import os
-from django.core.wsgi import get_wsgi_application
-os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'astra.settings')
-application = get_wsgi_application()
+# -*- coding: utf-8 -*-
+"""
+Created on Fri Dec 14 07:52:26 2018
 
-from jobs.models import WellConnector, Rig
-from personnel.models import Person
-from surveys.models import Survey
-from livewits import edrdata, timeremarks, connect, surveys
-from edrs.models import EDRComment, EDRRaw
-from django.utils.dateparse import parse_datetime
+@author: BrianBlackwell
+
+This Script will map:
+    
+    1 Totco
+    2 Pason
+    3 MyWells
+    
+    Data into common channels to be calculated by the analyzer and loaded into the Astra Database for future use.
+    
+    The minimum required channels are:
+        Date_Time	Hole_Depth	TVD	Bit_Depth	WOB	TD_RPM	TD_Torque	Diff_Press	ROP_A	Flow_In	Pump_Press	Total_SPM	Block_Height	Hookload	Overpull	Gamma_Ray	TF_Grav	TF_Mag	Svy_Azi	Svy_Inc
+    
+    The Currently Accepted "extra" Channels are:
+        ROP_I	Flow_Out	Ann_Press	Back_Press	Oscillator	TF_ACC	Live_Inc	MSE_EDR	AD_ROP	AD_WOB	AD_DP	AD_TQ	Mud_TI	 Mud_TO Mud_WI Mud_WO EDR_RS1	EDR_RS2	EDR_RS3	EDR_SLIPS
+
+data type if not supplied is determined by the value and naming convention of the date column. This may change as 
+"""
+import pandas as pd
+
+def edrmapper(edrdata):
+    if 'Date Time' in edrdata.columns:
+        edrdata=edrdata.rename(index=str, columns={'Date Time':'rig_time', 'Hole Depth':'hole_depth', 'TVD':'tvd', 'Bit Position':'bit_depth', 'Bit Weight':'wob', 'Top Drive RPM':'td_rpm', 'Top Drive Torque':'td_torque', 'Diff Press':'diff_press', 'ROP - Average':'rop_a', 'Flow In Rate':'flow_in', 'Pump Pressure':'pump_press', 'Pump SPM - Total':'strokes_total', 'Block Height':'block_height', 'Hook Load':'hookload', 'Overpull':'overpull', 'Gamma Ray':'gamma_ray', 'Toolface Grav':'tf_grav', 'Toolface Mag':'tf_mag', 'Svy Azimuth':'svy_azi', 'Svy Inclination':'svy_inc'})
+        try:
+            edrdata=edrdata.rename(columns={'ROP - Fast':'rop_i'})
+        except:
+            pass
+        
+        edrdata=edrdata.rename(columns={'Flow Out Rate':'flow_out'})
+        if 'flow_out' in edrdata.columns:
+           pass 
+        else:
+            edrdata['flow_out']=None
+        edrdata=edrdata.rename(columns={'Ann Pressure':'ann_press'})
+        if 'ann_press' in edrdata.columns:
+           pass 
+        else:
+            edrdata['ann_press']=None
+
+        edrdata=edrdata.rename(columns={'Back Pressure':'back_press'})
+        if 'back_press' in edrdata.columns:
+           pass 
+        else:
+            edrdata['back_press']=None
+        try:
+            edrdata=edrdata.rename(columns={'Live Inc':'live_inc'})
+        except:
+            pass
+        edrdata=edrdata.rename(columns={'Basic MSE':'edr_mse'})
+        if 'edr_mse' in edrdata.columns:
+           pass 
+        else:
+            edrdata['edr_mse']=None
+        try:   
+             edrdata=edrdata.rename(columns={'ROP - Auto Driller':'AD_ROP'})
+        except:
+            pass
+        try:
+            edrdata=edrdata.rename(columns={'Bit Wt. - Auto Driller':'AD_WOB'})
+        except:
+            pass
+
+        edrdata=edrdata.rename(columns={'Mud Temp In':'mud_ti'})
+        if 'mud_ti' in edrdata.columns:
+           pass 
+        else:
+            edrdata['mud_ti']=None
+        edrdata=edrdata.rename(columns={'Mud Temp Out':'mud_to'})
+        if 'mud_to' in edrdata.columns:
+           pass 
+        else:
+            edrdata['mud_to']=None
+        edrdata=edrdata.rename(columns={'Mud Weight In':'mud_wi'})
+        if 'mud_wi' in edrdata.columns:
+           pass 
+        else:
+            edrdata['mud_wi']=None
+        edrdata=edrdata.rename(columns={'Mud Weight Out':'mud_wo'})
+        if 'mud_wo' in edrdata.columns:
+           pass 
+        else:
+            edrdata['mud_wo']=None
+            
+        edrdata=edrdata.rename(columns={'Rig Activity':'edr_RS1'})
+        if 'edr_RS1' in edrdata.columns:
+           pass 
+        else:
+            edrdata['edr_RS1']=None
+        edrdata=edrdata.rename(columns={'Rig Activity Code':'edr_RS2'})
+        if 'edr_RS2' in edrdata.columns:
+           pass 
+        else:
+            edrdata['edr_RS2']=None
+        edrdata=edrdata.rename(columns={'Rig Activity SubCode':'edr_RS3'})
+        if 'edr_RS3' in edrdata.columns:
+           pass 
+        else:
+            edrdata['edr_RS3']=None
+        edrdata=edrdata.rename(columns={'Slip Status':'edr_slips'})
+        if 'edr_slips' in edrdata.columns:
+           pass 
+        else:
+            edrdata['edr_slips']=False
+            
+        if 'oscillator' in edrdata.columns:
+           pass 
+        else:
+            edrdata['oscillator']=False
+            
+            
+    if 'YYYY/MM/DD' in edrdata.columns:
+
+        edrdata['rig_time']= (edrdata['YYYY/MM/DD']+'T'+edrdata['HH:MM:SS'])
+        edrdata['rig_time']=pd.to_datetime(edrdata['rig_time'])
+        edrdata=edrdata.rename(index=str, columns={'Hole Depth (feet)':'hole_depth', 'True Vertical Depth (feet)':'tvd', 'Bit Depth (feet)':'bit_depth', 'Weight on Bit (klbs)':'wob', 'Rotary RPM (RPM)':'td_rpm', 'Rotary Torque (unitless)':'td_torque', 'Differential Pressure (psi)':'diff_press', 'Overall ROP (ft_per_hr)':'rop_a', 'Total Pump Output (gal_per_min)':'flow_in', 'Standpipe Pressure (psi)':'pump_press', 'Pump Total Strokes Rate (SPM)':'strokes_total', 'Block Height (feet)':'block_height', 'Hook Load (klbs)':'hookload', 'Over Pull (klbs)':'overpull', 'Gamma (api)':'gamma_ray', 'Gravity Toolface (degrees)':'tf_grav', 'Magnetic Toolface (degrees)':'tf_mag', 'Azimuth (degrees)':'svy_azi', 'Inclination (degrees)':'svy_inc'})
+        try:
+            edrdata=edrdata.rename(columns={'EDR Instantaneous ROP (ft_per_hr)':'rop_i'})
+        except:
+            pass
+        edrdata=edrdata.rename(columns={'Flow Out Rate':'flow_out'})
+        if 'flow_out' in edrdata.columns:
+           pass 
+        else:
+            edrdata['flow_out']=None
+        edrdata=edrdata.rename(columns={'Ann Pressure':'ann_press'})
+        if 'ann_press' in edrdata.columns:
+           pass 
+        else:
+            edrdata['ann_press']=None
+
+        edrdata=edrdata.rename(columns={'Back Pressure':'back_press'})
+        if 'back_press' in edrdata.columns:
+           pass 
+        else:
+            edrdata['back_press']=None
+        try:
+            edrdata=edrdata.rename(columns={'Live Inc':'live_inc'})
+        except:
+            pass
+        
+        edrdata=edrdata.rename(columns={'Relative MSE (unitless)':'edr_mse'})
+        if 'edr_mse' in edrdata.columns:
+           pass 
+        else:
+            edrdata['edr_mse']=None
+        try:
+            edrdata=edrdata.rename(columns={'ROP - Auto Driller':'AD_ROP'})
+        except:
+            pass
+        try:
+            edrdata=edrdata.rename(columns={'Bit Wt. - Auto Driller':'AD_WOB'})
+        except:
+            pass
+
+        edrdata=edrdata.rename(columns={'Mud Temp In':'mud_ti'})
+        if 'mud_ti' in edrdata.columns:
+           pass 
+        else:
+            edrdata['mud_ti']=None
+        edrdata=edrdata.rename(columns={'Mud Temp Out':'mud_to'})
+        if 'mud_to' in edrdata.columns:
+           pass 
+        else:
+            edrdata['mud_to']=None
+        edrdata=edrdata.rename(columns={'Mud Weight In':'mud_wi'})
+        if 'mud_wi' in edrdata.columns:
+           pass 
+        else:
+            edrdata['mud_wi']=None
+        edrdata=edrdata.rename(columns={'Mud Weight Out':'mud_wo'})
+        if 'mud_wo' in edrdata.columns:
+           pass 
+        else:
+            edrdata['mud_wo']=None
+            
+        edrdata=edrdata.rename(columns={'Rig Activity':'edr_RS1'})
+        if 'edr_RS1' in edrdata.columns:
+           pass 
+        else:
+            edrdata['edr_RS1']=None
+        edrdata=edrdata.rename(columns={'Rig Activity Code':'edr_RS2'})
+        if 'edr_RS2' in edrdata.columns:
+           pass 
+        else:
+            edrdata['edr_RS2']=None
+        edrdata=edrdata.rename(columns={'Rig Activity SubCode':'edr_RS3'})
+        if 'edr_RS3' in edrdata.columns:
+           pass 
+        else:
+            edrdata['edr_RS3']=None
+        edrdata=edrdata.rename(columns={'Slip Status':'edr_slips'})
+        if 'edr_slips' in edrdata.columns:
+           pass 
+        else:
+            edrdata['edr_slips']=False
+            
+        if 'oscillator' in edrdata.columns:
+           pass 
+        else:
+            edrdata['oscillator']=False
 
 
-
-
-def edrmapper(rig_id, data_frequency, animo_rig_id):
-    url, headers, username, password, uidWell, uidWellbore, well_name, rig_name = connect(
-        rig_id)
-
-    # print("this is the well name ", well_name)
-    edrs_on_job = EDRRaw.objects.filter(uid=uidWell)
-
-    if edrs_on_job.count() != 0:
-        # print("there are edrs on the job")
-        lastest_edr = edrs_on_job.latest('id')
-        latest_time = lastest_edr.rig_time
-    else:
-        well_connector = WellConnector(
-            well_name=well_name,
-            uid=uidWell,
-            rig_name=rig_name,
-            rig=Rig.objects.get(pk=animo_rig_id),
-            data_frequency=data_frequency
-        )
-
-        well_connector.save()
-
-        #  print("there are no edrs on the job")
-        latest_time = parse_datetime("2019-06-24T08:00:00-00:00")
-
-    edrraw = edrdata(rig_id, latest_time, data_frequency)
-
-    for i in range(0, len(edrraw), 1):
-        edr_rig_time = parse_datetime(edrraw.rig_time.values[i])
-
-        if(edr_rig_time > latest_time and edrraw.hole_depth.values[i]):
-            # print("EDR on Rig: ", rig_id, " -- Time: ", edr_rig_time)
-            # print("Well Name: ", well_name)
-            edr = EDRRaw(
-                uid=uidWell,
-                rig_time=edrraw.rig_time.values[i] if edrraw.rig_time.values[i] != "" else None,
-                ann_press=edrraw.ann_press.values[i] if edrraw.ann_press.values[i] != "" else None,
-                rop_a=edrraw.rop_a.values[i] if edrraw.rop_a.values[i] != "" else None,
-                back_press=edrraw.back_press.values[i] if edrraw.back_press.values[i] != "" else None,
-                edr_mse=edrraw.edr_mse.values[i] if edrraw.edr_mse.values[i] != "" else None,
-                bit_depth=edrraw.bit_depth.values[i] if edrraw.bit_depth.values[i] != "" else None,
-                block_height=edrraw.block_height.values[i] if edrraw.block_height.values[i] != "" else None,
-                mud_wi=edrraw.mud_wi.values[i] if edrraw.mud_wi.values[i] != "" else None,
-                mud_wo=edrraw.mud_wo.values[i] if edrraw.mud_wo.values[i] != "" else None,
-                diff_press=edrraw.diff_press.values[i] if edrraw.diff_press.values[i] != "" else None,
-                rop_i=edrraw.rop_i.values[i] if edrraw.rop_i.values[i] != "" else 0,
-                pump_press=edrraw.pump_press.values[i] if edrraw.pump_press.values[i] != "" else None,
-                flow_in=edrraw.flow_in.values[i] if edrraw.flow_in.values[i] != "" else 0,
-                flow_out=edrraw.flow_out.values[i] if edrraw.flow_out.values[i] != "" else None,
-                gamma_ray=edrraw.gamma_ray.values[i] if edrraw.gamma_ray.values[i] != "" else None,
-                edr_RS1=edrraw.edr_RS1.values[i] if edrraw.edr_RS1.values[i] != "" else None,
-                edr_RS2=edrraw.edr_RS2.values[i] if edrraw.edr_RS2.values[i] != "" else None,
-                edr_RS3=edrraw.edr_RS3.values[i] if edrraw.edr_RS3.values[i] != "" else None,
-                overpull=edrraw.overpull.values[i] if edrraw.overpull.values[i] != "" else None,
-                edr_slips=True if edrraw.edr_slips.values[i] == "2" else False,
-                svy_azi=edrraw.svy_azi.values[i] if edrraw.svy_azi.values[i] != "" else None,
-                tf_grav=edrraw.tf_grav.values[i] if edrraw.tf_grav.values[i] != "" else None,
-                svy_inc=edrraw.svy_inc.values[i] if edrraw.svy_inc.values[i] != "" else None,
-                tf_mag=edrraw.tf_mag.values[i] if edrraw.tf_mag.values[i] != "" else None,
-                hookload=edrraw.hookload.values[i] if edrraw.hookload.values[i] != "" else 0,
-                td_rpm=edrraw.td_rpm.values[i] if edrraw.td_rpm.values[i] != "" else None,
-                td_torque=edrraw.td_torque.values[i] if edrraw.td_torque.values[i] != "" else None,
-                mud_ti=edrraw.mud_ti.values[i] if edrraw.mud_ti.values[i] != "" else None,
-                mud_to=edrraw.mud_to.values[i] if edrraw.mud_to.values[i] != "" else None,
-                hole_depth=edrraw.hole_depth.values[i] if edrraw.hole_depth.values[i] != "" else None,
-                total_spm=edrraw.total_spm.values[i] if edrraw.total_spm.values[i] != "" else None,
-                strokes_total=edrraw.strokes_total.values[i] if edrraw.strokes_total.values[i] != "" else None,
-                tvd=edrraw.tvd.values[i] if edrraw.tvd.values[i] != "" else None,
-                wob=edrraw.wob.values[i] if edrraw.wob.values[i] != "" else None)
-            edr.save()
-
-    edrraw, uidWell, uidWellbore, well_name, rig_name = timeremarks(rig_id)
-
-    comments_on_job = EDRComment.objects.filter(uid=uidWell)
-
-    if comments_on_job.count() != 0:
-        print("there are comments on the job")
-        lastest_edr = comments_on_job.latest('id')
-        latest_time = lastest_edr.rig_time
-    else:
-        print("there are no comments on the job")
-        latest_time = parse_datetime("1970-01-01T12:00:00-00:00")
-
-    for i in range(0, len(edrraw), 1):
-        edr_rig_time = parse_datetime(edrraw.rig_time.values[i])
-        if(edr_rig_time > latest_time):
-            print("Comment on Rig: ", rig_id, " -- Time: ", latest_time)
-            edr = EDRComment(
-                uid=uidWell,
-                rig_time=edrraw.rig_time.values[i],
-                comments=edrraw.comments.values[i])
-            edr.save()
-
-    edrraw, uidWell, uidWellbore, well_name, rig_name = timeremarks(rig_id)
-
-    comments_on_job = EDRComment.objects.filter(uid=uidWell)
-
-    if comments_on_job.count() != 0:
-        print("there are comments on the job")
-        lastest_edr = comments_on_job.latest('id')
-        latest_time = lastest_edr.rig_time
-    else:
-        print("there are no comments on the job")
-        latest_time = parse_datetime("1970-01-01T12:00:00-00:00")
-
-    for i in range(0, len(edrraw), 1):
-        edr_rig_time = parse_datetime(edrraw.rig_time.values[i])
-        if(edr_rig_time > latest_time):
-            print("Comment on Rig: ", rig_id, " -- Time: ", latest_time)
-            edr = EDRComment(
-                uid=uidWell,
-                rig_time=edrraw.rig_time.values[i],
-                comments=edrraw.comments.values[i])
-            edr.save()
-
-    edrraw, uidWell, uidWellbore, well_name, rig_name = surveys(rig_id)
-
-    surveys_on_job = Survey.objects.filter(uid=uidWell)
-
-    if surveys_on_job.count() != 0:
-        print("there are surveys on the job")
-        lastest_edr = surveys_on_job.latest('id')
-        latest_time = lastest_edr.rig_time
-    else:
-        print("there are no surveys on the job")
-        latest_time = parse_datetime("1970-01-01T12:00:00-00:00")
-
-    for i in range(0, len(edrraw), 1):
-        edr_rig_time = parse_datetime(edrraw.rig_time.values[i])
-        if(edr_rig_time > latest_time):
-            print("Survey on Rig: ", rig_id, " -- Time: ", latest_time)
-            survey = Survey(
-                uid=uidWell,
-                rig_time=edrraw.rig_time.values[i],
-                md=edrraw.md.values[i],
-                tvd=edrraw.tvd.values[i],
-                inc=edrraw.incl.values[i],
-                azi=edrraw.azi.values[i],
-                edr_dls=edrraw.dls.values[i],
-                edr_dispNs=edrraw.dispNs.values[i],
-                edr_dispEw=edrraw.dispEw.values[i],
-                person=Person.objects.get(pk=1),  # Required
-                name="Totco",  # Required
-                north="0",  # Required
-                east="0",  # Required
-                vertical_section="0",  # Required
-                dogleg="0",  # Required
-                build_rate="0",  # Required
-                turn_rate="0",  # Required
-                calculated_tf="0",  # Required
-                calculated_ang="0",  # Required
-                step_out="0"  # Required
-            )
-            survey.save()
+    return edrdata

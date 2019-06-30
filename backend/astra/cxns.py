@@ -104,9 +104,9 @@ def connectit(edrdata):
                FXCT2 = OBTS+STS+STOB
                PCC = min(PoffC,PonC)
                PTP = (edrdata.loc[PonE, "rig_time"] - edrdata.loc[PoffS, "rig_time"])/np.timedelta64(1, 'm')
-               Tour = "Night"
+               Tour = False
                if edrdata.loc[S,"rig_time"].hour >= 6 and edrdata.loc[S,"rig_time"].hour < 18:
-                   Tour = "Day"
+                   Tour = True
                if FXCT2 <  CXN_THRESH: 
                    edrdata.iloc[S:E,edrdata.columns.get_loc('rig_activity2')]= int(9)
                    CXNC += 1
@@ -115,5 +115,9 @@ def connectit(edrdata):
                    Connections.loc[len(Connections)] = arow2
      
     #print(Connections)              
-
+    Connections['total_time']=Connections['total_time'].round(decimals = 3)
+    Connections['btm_slips']=Connections['btm_slips'].round(decimals = 3)
+    Connections['slips_slips']=Connections['slips_slips'].round(decimals = 3)
+    Connections['slips_btm']=Connections['slips_btm'].round(decimals = 3)
+    Connections['pumps_pumps']=Connections['pumps_pumps'].round(decimals = 3)
     return Connections

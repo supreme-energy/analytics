@@ -10,6 +10,7 @@ class Bha(models.Model):
     bha_number = models.IntegerField(null=True, blank=True)  # auto generated
     bha_length = models.DecimalField(
         max_digits=10, decimal_places=3, null=True, blank=True)
+    speed = models.DecimalField(max_digits=6, decimal_places=3, null=True, blank=True)
     depth_in = models.IntegerField()
     depth_out = models.IntegerField(null=True, blank=True)
     time_in = models.DateTimeField(null=True, blank=True)

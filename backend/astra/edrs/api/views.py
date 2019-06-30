@@ -1,9 +1,9 @@
 from django.db.models import Case, Value, When, FloatField, F, ExpressionWrapper
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import viewsets
-from edrs.models import (EDRRaw, EDRProcessed, EDRScoutMotor,
-                         EDRDrilled, EDRCXN, EDRTrip, EDRComment)
-from edrs.api.serializers import (EDRRawSerializer, EDRProcessedSerializer, EDRScoutMotorSerializer,
+from edrs.models import (EDRRaw, EDRProcessed,
+                         EDRDrilled, EDRCXN, EDRComment, EDRTrip)
+from edrs.api.serializers import (EDRRawSerializer, EDRProcessedSerializer,
                                   EDRDrilledSerializer, EDRCXNSerializer, EDRTripSerializer,
                                   EDRCommentSerializer, RTAVerticalSerializer, RTACurveSerializer)
 from jobs.models import WellConnector
@@ -19,13 +19,6 @@ class EDRRawViewSet(viewsets.ModelViewSet):
 class EDRProcessedViewSet(viewsets.ModelViewSet):
     serializer_class = EDRProcessedSerializer
     queryset = EDRProcessed.objects.all()
-    filter_backends = (DjangoFilterBackend,)
-    filter_fields = '__all__'
-
-
-class EDRScoutMotorViewSet(viewsets.ModelViewSet):
-    serializer_class = EDRScoutMotorSerializer
-    queryset = EDRScoutMotor.objects.all()
     filter_backends = (DjangoFilterBackend,)
     filter_fields = '__all__'
 
