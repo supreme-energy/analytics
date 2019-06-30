@@ -40,7 +40,7 @@ class EDRProcessedSerializer(serializers.ModelSerializer):
     class Meta:
         model = EDRProcessed
         fields = '__all__'
-        read_only_field = ('id',)
+        read_only_field = ('id','bit_variance','data_gap','time_elapsed','tq_variance')
 
 
 

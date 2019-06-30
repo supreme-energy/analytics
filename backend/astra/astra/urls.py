@@ -1,5 +1,6 @@
 from django.contrib import admin
 from django.urls import path, include
+from rest_framework.documentation import include_docs_urls
 
 urlpatterns = [
     path('admin/', admin.site.urls),
@@ -23,5 +24,6 @@ urlpatterns = [
     path('api/rta-verticals/', include('edrs.api.urls.rta-verticals')),
     path('api/surveys/', include('surveys.api.urls.surveys')),
     path('api/users/', include('personnel.api.urls.users')),
-    path('api/well-connectors/', include('jobs.api.urls.well-connectors'))
+    path('api/well-connectors/', include('jobs.api.urls.well-connectors')),
+    path('docs/', include_docs_urls(title='Astra_Analytics'))
 ]

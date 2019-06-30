@@ -4,20 +4,15 @@
 """
 import numpy as np
 from numpy import cumsum
-import scipy as sy
-import pylab as pyl
-import os
+
 import pandas as pd
-from pandas.io import gbq
+
 from datetime import datetime
 import time
-from statistics import variance
-from scipy.stats import linregress
-from scipy.ndimage import gaussian_filter
-from scipy.signal import savgol_filter
-import bisect
 
-import time
+from scipy.signal import savgol_filter
+import math
+
 start = time.time()
 #Define EDR Data Triggers
 ROTATE_THRESH = 25
@@ -27,10 +22,7 @@ hookload_THRESH = 55
 FLOW_THRESH = 30
 TRIP_THRESH = 150
 CXN_THRESH = 30
-Surface_Thresh=200
-Vertical_Thresh=5600
-Curve_Thresh=6900
-data_gap =5
+
 #ActiveCell.FormulaR1C1 = "=IFERROR(,IF(AND((RC" & HoleDepth_C & "-R[-1]C" & HoleDepth_C & ")=0,(RC" & Overpull_C & ")>0), 5,IF(R[-1]C" & HoleDepth_C & "=0,1,IF(R[-1]C" & HoleDepth_C & "-MAX(R[-198]C" & HoleDepth_C & ":R[-1]C" & HoleDepth_C & ")<0,6,IF(RC" & Date_C & "=0,1,0)))))),9)"
 #datesandtimes= [datetime.strptime(x, "%Y-%m-%d %H:%M:%S") for x in edrdata['rig_time']]
 
@@ -80,11 +72,18 @@ def cleanitup(edrdata,DATA_FREQUENCY):
     clean_2 =clean_2[::-1]
     
     edrdata['clean_3'] = list(map(lambda w,a,x,y,z: (9 if x==y and z > 11 else (8 if w > 10 and a==-2 else 0)), edrdata['clean_2'].rolling(100).max(),clean_2,edrdata['hole_depth'],edrdata['hole_depth'].shift(1),edrdata['data_gap'].shift(-1)))
-    edrdata['bit_variance']=list(map(lambda M1,M2,b1,b3: (M1-M2) if (b1-b3) == 0 else (M1-M2)*(b1-b3)/(abs(b1-b3)), edrdata['bit_depth'].rolling(100).max(),edrdata['bit_depth'].rolling(100).min(),edrdata['bit_depth'],edrdata['bit_depth'].rolling(30).mean()))
+    edrdata['bit_variance']=0
+    edrdata['bit_variance']=list(map(lambda M1,M2,b1,b3: (M1-M2) if (b1-b3) == 0 else 0 if math.isnan((M1-M2)*(b1-b3)/(abs(b1-b3))) else (M1-M2)*(b1-b3)/(abs(b1-b3)), edrdata['bit_depth'].rolling(100).max(),edrdata['bit_depth'].rolling(100).min(),edrdata['bit_depth'],edrdata['bit_depth'].rolling(30).mean()))
     edrdata['savgol']=savgol_filter(edrdata['bit_depth'], window_length=49, polyorder=2, deriv=1)
-    edrdata['trip_status2']= list(map(lambda p: (4 if p < -1.8 and p >-12 else 6 if p > 2.2 and p < 12 else 0), edrdata['savgol']))
+    if DATA_FREQUENCY <= 5:
+        edrdata['trip_status2']= list(map(lambda p: (4 if p < -1.8 and p >-12 else 6 if p > 2.2 and p < 12 else 0), edrdata['savgol']))
+        print("Data Freq =",DATA_FREQUENCY )
+    else:
+        edrdata['trip_status2']= list(map(lambda p: (4 if p < -2.4 and p >-14 else 6 if p > 3 and p < 14 else 0), edrdata['savgol']))
+        print("Data Freq > 5")
     edrdata['rig_activity2']= list(map(lambda p,r,b100,b1,b3,h,c1,c3: (5 if (c1==0 and c3==0) else 3 if ((h-b1)>TRIP_THRESH and p>0.95 and r> 0.95) else 2 if ((h-b1)>TRIP_THRESH and p> 0.95) else 4 if ((h-b1)>TRIP_THRESH) and (b1-b100) <-0.25 else  6 if ((h-b1)>TRIP_THRESH) and (b1-b100) >0.25 else 7 if ((h-b1)>TRIP_THRESH and b1<1000) else 1 if ((b1-b3) <-0.2) else -1 if ((b1-b3) >0.2) else 3 if  (p>0.05 and r> 0.05) else 2 if (p> 0.05) else 0), edrdata['pump_status'].rolling(10).mean(), edrdata['rot_sli'].rolling(10).mean(),edrdata['bit_depth'].rolling(50).mean(),edrdata['bit_depth'],edrdata['bit_depth'].rolling(250).mean(),edrdata['hole_depth'], edrdata['clean_1'], edrdata['clean_3']))
-
+    edrdata['time_elapsed']=edrdata['time_elapsed'].round(decimals = 4)
+    edrdata['data_gap']=edrdata['data_gap'].round(decimals = 4)
     return edrdata
 
 def trippedit(edrdata,DATA_FREQUENCY,bhas,intervals):

@@ -25,7 +25,7 @@ class WellConnector(models.Model):
     well_name = models.CharField(max_length=50, null=True, blank=True)
     rig_name = models.CharField(max_length=50, null=True, blank=True)
     data_frequency = models.IntegerField(null=True, blank=True)
-    url = models.CharField(max_length=50, null=True, blank=True)
+    url = models.CharField(max_length=100, null=True, blank=True)
     username = models.CharField(max_length=50, null=True, blank=True)
     password = models.CharField(max_length=50, null=True, blank=True)
 

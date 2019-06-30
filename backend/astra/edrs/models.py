@@ -18,52 +18,52 @@ class EDRRaw(models.Model):
     rig_time = models.DateTimeField()
     uid = models.CharField(max_length=50)
     hole_depth = models.DecimalField(
-        max_digits=10, decimal_places=3, null=True, blank=True)
+        max_digits=15, decimal_places=6, null=True, blank=True)
     bit_depth = models.DecimalField(
-        max_digits=10, decimal_places=3, null=True, blank=True)
+        max_digits=15, decimal_places=3, null=True, blank=True)
     tvd = models.DecimalField(
-        max_digits=10, decimal_places=3, null=True, blank=True)
+        max_digits=15, decimal_places=3, null=True, blank=True)
     wob = models.DecimalField(
-        max_digits=10, decimal_places=3, null=True, blank=True)
+        max_digits=15, decimal_places=3, null=True, blank=True)
     block_height = models.DecimalField(
-        max_digits=10, decimal_places=3, null=True, blank=True)
+        max_digits=15, decimal_places=3, null=True, blank=True)
     diff_press = models.DecimalField(
-        max_digits=10, decimal_places=3, null=True, blank=True)
+        max_digits=15, decimal_places=3, null=True, blank=True)
     flow_in = models.DecimalField(
-        max_digits=10, decimal_places=3, null=True, blank=True)
+        max_digits=15, decimal_places=3, null=True, blank=True)
     flow_out = models.DecimalField(
-        max_digits=10, decimal_places=3, null=True, blank=True)
+        max_digits=15, decimal_places=3, null=True, blank=True)
     gamma_ray = models.DecimalField(
-        max_digits=10, decimal_places=3, null=True, blank=True)
+        max_digits=15, decimal_places=3, null=True, blank=True)
     pump_press = models.DecimalField(
-        max_digits=10, decimal_places=3, null=True, blank=True)
+        max_digits=15, decimal_places=3, null=True, blank=True)
     rop_i = models.DecimalField(
-        max_digits=10, decimal_places=3, null=True, blank=True)
+        max_digits=15, decimal_places=3, null=True, blank=True)
     rop_a = models.DecimalField(
-        max_digits=10, decimal_places=3, null=True, blank=True)
+        max_digits=15, decimal_places=3, null=True, blank=True)
     strokes_total = models.DecimalField(
-        max_digits=10, decimal_places=3, null=True, blank=True)
+        max_digits=15, decimal_places=3, null=True, blank=True)
     svy_azi = models.DecimalField(
-        max_digits=6, decimal_places=3, null=True, blank=True)
+        max_digits=10, decimal_places=3, null=True, blank=True)
     svy_inc = models.DecimalField(
-        max_digits=6, decimal_places=3, null=True, blank=True)
+        max_digits=10, decimal_places=3, null=True, blank=True)
     tf_grav = models.DecimalField(
-        max_digits=6, decimal_places=3, null=True, blank=True)
+        max_digits=10, decimal_places=3, null=True, blank=True)
     tf_mag = models.DecimalField(
-        max_digits=6, decimal_places=3, null=True, blank=True)
+        max_digits=10, decimal_places=3, null=True, blank=True)
     td_rpm = models.DecimalField(
-        max_digits=10, decimal_places=3, null=True, blank=True)
+        max_digits=15, decimal_places=3, null=True, blank=True)
     td_torque = models.DecimalField(
-        max_digits=10, decimal_places=3, null=True, blank=True)
+        max_digits=15, decimal_places=3, null=True, blank=True)
     edr_slips = models.BooleanField(default=False)
     total_spm = models.DecimalField(
-        max_digits=6, decimal_places=3, null=True, blank=True)
-    hookload = models.DecimalField(
-        max_digits=6, decimal_places=3, null=True, blank=True)
-    overpull = models.DecimalField(
-        max_digits=6, decimal_places=3, null=True, blank=True)
-    edr_mse = models.DecimalField(
         max_digits=10, decimal_places=3, null=True, blank=True)
+    hookload = models.DecimalField(
+        max_digits=10, decimal_places=3, null=True, blank=True)
+    overpull = models.DecimalField(
+        max_digits=10, decimal_places=3, null=True, blank=True)
+    edr_mse = models.DecimalField(
+        max_digits=15, decimal_places=3, null=True, blank=True)
     oscillator = models.BooleanField(default=False)
     edr_RS1 = models.IntegerField(null=True, blank=True)
     edr_RS2 = models.IntegerField(null=True, blank=True)
@@ -74,17 +74,17 @@ class EDRRaw(models.Model):
     cont_azi = models.DecimalField(
         max_digits=6, decimal_places=3, null=True, blank=True)
     back_press = models.DecimalField(
-        max_digits=10, decimal_places=3, null=True, blank=True)
+        max_digits=15, decimal_places=3, null=True, blank=True)
     ann_press = models.DecimalField(
-        max_digits=10, decimal_places=3, null=True, blank=True)
+        max_digits=15, decimal_places=3, null=True, blank=True)
     mud_ti = models.DecimalField(
-        max_digits=10, decimal_places=3, null=True, blank=True)
+        max_digits=15, decimal_places=3, null=True, blank=True)
     mud_to = models.DecimalField(
-        max_digits=10, decimal_places=3, null=True, blank=True)
+        max_digits=15, decimal_places=3, null=True, blank=True)
     mud_wi = models.DecimalField(
-        max_digits=10, decimal_places=3, null=True, blank=True)
+        max_digits=15, decimal_places=3, null=True, blank=True)
     mud_wo = models.DecimalField(
-        max_digits=10, decimal_places=3, null=True, blank=True)
+        max_digits=15, decimal_places=3, null=True, blank=True)
 
     def save(self, *args, **kwargs):
         # print("inside edrraw save")
@@ -712,15 +712,16 @@ class EDRProcessed(models.Model):
                                    on_delete=models.CASCADE, null=True, blank=True)  # 1 EDR_Lines to 1 processed line for now, May reduce data later
     uid = models.CharField(max_length=50)
     data_gap = models.DecimalField(
-        max_digits=10, decimal_places=4, blank=True, null=True)  # seconds
+        max_digits=15, decimal_places=4, blank=True, null=True)  # seconds
     time_elapsed = models.DecimalField(
-        max_digits=10, decimal_places=4, blank=True, null=True)  # hours
+        max_digits=15, decimal_places=4, blank=True, null=True)  # hours
     day_num = models.IntegerField()
     day_night = models.BooleanField(default=True)
     bit_status = models.IntegerField()
     slip_status = models.IntegerField()
     block_status = models.IntegerField()
     pump_status = models.IntegerField()
+    cxn_count = models.IntegerField(null=True, blank=True)
     trip_status = models.IntegerField()
     trip_status2 = models.IntegerField(blank=True, null=True)
     trip_out_number = models.IntegerField()
@@ -732,9 +733,9 @@ class EDRProcessed(models.Model):
     clean_2 = models.IntegerField()
     clean_3 = models.IntegerField(blank=True, null=True)
     tq_variance = models.DecimalField(
-        max_digits=10, decimal_places=3, blank=True, null=True)
+        max_digits=15, decimal_places=3, blank=True, null=True)
     bit_variance = models.DecimalField(
-        max_digits=10, decimal_places=3, blank=True, null=True)
+        max_digits=15, decimal_places=3, blank=True, null=True)
 
     def __str__(self):
         return self.uid
@@ -756,23 +757,23 @@ class EDRDrilled(models.Model):
                             on_delete=models.PROTECT, null=True, blank=True)  # 0 or many EDR_Lines to 0 or 1 interval
     formation = models.ForeignKey(Interval, related_name="formation_edr_drill",
                                   on_delete=models.PROTECT, null=True, blank=True)  # 0 or many EDR_Lines to 1 interval
-    drilled_ft = models.DecimalField(max_digits=10, decimal_places=3)
-    bit_rpm = models.DecimalField(max_digits=6, decimal_places=3)
+    drilled_ft = models.DecimalField(max_digits=15, decimal_places=3)
+    bit_rpm = models.DecimalField(max_digits=10, decimal_places=3)
     slide_status = models.IntegerField(null=True, blank=True)
     rot_status = models.IntegerField(null=True, blank=True)
     normalized_tf = models.DecimalField(
-        max_digits=6, decimal_places=3, null=True, blank=True)
+        max_digits=10, decimal_places=3, null=True, blank=True)
     slide_count = models.IntegerField(null=True, blank=True)
     rot_count = models.IntegerField(null=True, blank=True)
     stand_count = models.IntegerField()
-    astra_mse = models.DecimalField(max_digits=10, decimal_places=3, null=True, blank=True)
+    astra_mse = models.DecimalField(max_digits=15, decimal_places=3, null=True, blank=True)
     slide_value_tf = models.DecimalField(
-        max_digits=10, decimal_places=3, null=True, blank=True)
-    rop_i = models.DecimalField(max_digits=10, decimal_places=3)
-    rop_a = models.DecimalField(max_digits=10, decimal_places=3)
+        max_digits=15, decimal_places=3, null=True, blank=True)
+    rop_i = models.DecimalField(max_digits=15, decimal_places=3)
+    rop_a = models.DecimalField(max_digits=15, decimal_places=3)
 
     def __str__(self):
-        return str(self.job)
+        return str(self.uid)
 
     class Meta:
         verbose_name_plural = "Drill EDRs"
@@ -783,17 +784,17 @@ class EDRCXN(models.Model):
         auto_now_add=True)  # date generated when created
     uid = models.CharField(max_length=50)
     edr_raw = models.OneToOneField(EDRRaw, related_name="edr_raw_edrcxn", on_delete=models.CASCADE)  # 1 EDR_Line to 1 raw line for now
-    total_time = models.DecimalField(max_digits=10, decimal_places=3)
-    btm_slips = models.DecimalField(max_digits=10, decimal_places=3)
-    slips_slips = models.DecimalField(max_digits=10, decimal_places=3)
-    slips_btm = models.DecimalField(max_digits=10, decimal_places=3)
+    total_time = models.DecimalField(max_digits=15, decimal_places=3)
+    btm_slips = models.DecimalField(max_digits=15, decimal_places=3)
+    slips_slips = models.DecimalField(max_digits=15, decimal_places=3)
+    slips_btm = models.DecimalField(max_digits=15, decimal_places=3)
     day_night = models.BooleanField(default=False)
     pump_cycles = models.IntegerField()
     cxn_count = models.IntegerField()
-    pumps_pumps = models.DecimalField(max_digits=10, decimal_places=3, null=True, blank=True)
+    pumps_pumps = models.DecimalField(max_digits=15, decimal_places=3, null=True, blank=True)
 
     def __str__(self):
-        return self.job
+        return self.uid
 
     class Meta:
         verbose_name_plural = "CXN EDRs"
@@ -809,17 +810,17 @@ class EDRTrip(models.Model):
                             on_delete=models.PROTECT, null=True, blank=True)  # 0 or many EDR_Lines to 1 interval
     interval = models.ForeignKey(Interval, related_name="interval_edr_trip",
                                  on_delete=models.PROTECT, null=True, blank=True)  # 0 or many EDR_Lines to 1 interval
-    total_time = models.DecimalField(max_digits=10, decimal_places=3)
+    total_time = models.DecimalField(max_digits=15, decimal_places=3)
     start_time = models.DateTimeField(null=True, blank=True)
     end_time = models.DateTimeField(null=True, blank=True)
-    depth = models.DecimalField(max_digits=10, decimal_places=3, null=True, blank=True)
+    depth = models.DecimalField(max_digits=15, decimal_places=3, null=True, blank=True)
     trip_direction = models.BooleanField(default=False)
     casing = models.BooleanField(default=False)
     trip_count = models.IntegerField()
     bha_time = models.DateTimeField(null=True, blank=True)
 
     def __str__(self):
-        return self.job
+        return self.uid
 
     class Meta:
         verbose_name_plural = "Trip EDRs"
@@ -835,7 +836,7 @@ class EDRComment(models.Model):
     comments = models.TextField()
 
     def __str__(self):
-        return str(self.job)
+        return str(self.uid)
 
     class Meta:
         verbose_name_plural = "EDR Comments"

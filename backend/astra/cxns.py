@@ -81,11 +81,16 @@ def connectit(edrdata):
                     NOSAT
                     
     """
+    edrdata['cxn_count']=0
     S=E=CXNC=PoffC=PoffS=SinS=SoutE=PonE=PonC=0
     for E in CXNEnd.index:
        SS = CXNStart.index[CXNStart.index < E].max()
        if SS>S:
            S= SS
+           MDS =float(edrdata.loc[S, 'hole_depth'])
+           MDE = float(edrdata.loc[E, 'hole_depth'])
+           DTS =edrdata.loc[S, 'rig_time']
+           DTE = edrdata.loc[E, 'rig_time']
            PonC = np.logical_and(CXNPon.index>S, CXNPon.index<E).sum()
            SinC = np.logical_and(CXNSin.index>S, CXNSin.index<E).sum()
            SoutC = np.logical_and(CXNSout.index>S, CXNSout.index<E).sum()
@@ -113,6 +118,8 @@ def connectit(edrdata):
                    #arow2 =[CXNC,CDepth, Tour,FXCT,FXCT2,OBTS,STS,STOB,PCC,PTP,S,PoffS,SinS,SoutE,PonE,E]
                    arow2 =[CXNC,CDepth,Tour,FXCT,OBTS,STS,STOB,PCC,PTP,edr_raw]
                    Connections.loc[len(Connections)] = arow2
+                   edrdata['cxn_count']= list(map(lambda x,y: (y if x< DTS else CXNC if x>=DTS and x<=DTE else 0),edrdata['rig_time'],edrdata['cxn_count']))
+               
      
     #print(Connections)              
     Connections['total_time']=Connections['total_time'].round(decimals = 3)
@@ -120,4 +127,4 @@ def connectit(edrdata):
     Connections['slips_slips']=Connections['slips_slips'].round(decimals = 3)
     Connections['slips_btm']=Connections['slips_btm'].round(decimals = 3)
     Connections['pumps_pumps']=Connections['pumps_pumps'].round(decimals = 3)
-    return Connections
+    return Connections, edrdata

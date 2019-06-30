@@ -7,17 +7,14 @@ Created on Sat April 21 14:53:57 2018
 import numpy as np
 from numpy import cumsum, inf
 import scipy as sy
-import pylab as pyl
-import os
+
 import pandas as pd
-from pandas.io import gbq
+
 from datetime import datetime
 import time
 from decimal import *
 
-from statistics import variance
-from scipy.stats import linregress
-from scipy.ndimage import gaussian_filter
+
 from scipy.signal import savgol_filter
 
 from datetime import datetime,date
@@ -65,7 +62,8 @@ def drillitup(edrdata,VSPlane):
     drilldata['astra_mse']= list(map(lambda hs,wob,tq,brpm,ropi: None if hs == 0 or hs is None or ropi == 0 or ropi is None or brpm is None else wob/(pi*hs*hs/4)+(120*pi*brpm*tq)/(pi*hs*hs*ropi/4),drilldata['hole_size'],drilldata['wob'],drilldata['td_torque'],drilldata['bit_rpm'],drilldata['rop_i']))
     drilldata['astra_mse'] = list(map(lambda w,y,z: (0 if w< 0 else y if w>y*2 else 0 if w==np.inf else w),drilldata['astra_mse'],drilldata['astra_mse'].rolling(20).mean(),drilldata['astra_mse'].shift(-1)))
     drilldata['flow_in'] = list(map(lambda w,y,z: (0 if w< 0 else y if w>y*2 else 0 if w==np.inf else w),drilldata['flow_in'],drilldata['flow_in'].rolling(20).mean(),drilldata['flow_in'].shift(-1)))
-    
+    drilldata['slide_status']=list(map(lambda w: (1 if w== 0 else 0),drilldata['rot_sli']))
+    drilldata['rot_status']=list(map(lambda w: (1 if w== 1 else 0),drilldata['rot_sli']))
     drilldata['slide_value_tf']= list(map(lambda w,x2,x1,y: (0 if w==1 or math.isnan(x1) else (x2-x1)*cos(radians(y))), drilldata['rot_sli'],drilldata['hole_depth'],drilldata['hole_depth'].shift(1), drilldata['normalized_tf']))
     #drilldata['Lat_L']=drilldata['hole_depth']-Curve_Thresh
     #drilldata['A_interval_code']= list(map(lambda y: (1 if y =="Surface" or y =="surface" or y =="surf" or y =="S" else 2 if y =="Intermediate" or y =="intermediate" or y =="int" or y =="I" else 3 if y =="Curve" or y =="curve" or y =="c" or y =="C" else 4 if y =="Lateral" or y =="lateral" or y =="lat" or y =="L" else 7 if y =="Vertical" or y =="vertical" or y =="vert" or y =="V" else 8 if y =="Drillout" or y =="drillout" or y =="drill out" or y =="DO" else 11), drilldata['A_interval']))
@@ -120,9 +118,7 @@ def Tourism(drilldata):
     TourData.insert(3, 'Full EDR End', TourData1['index'])
     TourData.insert(5, 'rig_time End', TourData1['rig_time'])
     TourData['hole_depth End'] = TourData1['hole_depth']
-    #TourData['tvd End'] = TourData1['tvd']
     return (TourData)   
-    #analyzer2.columns = ['ROP Avg (Rotating)','	wob Avg (Rotating)','td_rpm Avg (Rotating)','bit rpm Avg (Rotating)','diff_pressure Avg (Rotating)','Flow Rate Avg (Rotating)','pump_press (Rotating) ','td_torque Avg (Rotating) ','ROP Ratio	Max ROP','Best ROP','Above AVG ROP','Below AVG ROP','Min ROP','Max wob	Best wob','Above AVG wob','Below AVG wob','Min wob','Max Differential pressure','Best Differential pressure','Above AVG Differential pressure','Below AVG Differential pressure','Min Differential pressure','Max bit rpms','Best bit rpms','Above AVG bit rpms','Below AVG bit rpms','Min bit rpms']
 
 
 def SlideSheet(drilldata):
@@ -150,12 +146,6 @@ def SlideSheet(drilldata):
            MDE = float(drilldata.loc[I, 'hole_depth'])
            FD =float(MDE-MDS)
            if FD >  S_THRESH:  
-                WID = 1
-                AC = int(17)
-                IC= int(drilldata.loc[Q,'A_interval_code'])
-                BHAN = int(drilldata.loc[Q, 'A_bha_num'])
-                DN = int(drilldata.loc[Q, 'day_num'])
-                WSN = int(drilldata.loc[Q,'stand_count'])
 
                 idata =  drilldata[ drilldata['hole_depth'] <= MDS]; idata =  drilldata[ drilldata['hole_depth'] > MDE]
 
@@ -167,9 +157,7 @@ def SlideSheet(drilldata):
                 if SlidFT > S_THRESH:
 
                     
-                    #c.execute("INSERT INTO ASTRA_ARRAYS (WELL_ID,ARRAY_CODE,INTERVAL_CODE,BHA_NUM,DAY_NUM,WELL_STAND_NUM, hole_depth_START, hole_depth_END,FOOTAGE_DRILLED,tvd_START, tvd_END,FEDR_I_START,FEDR_I_End,DEDR_I_START,DEDR_I_End,DT_START,DT_End,Total_Hours,D_Hours,rop_aVG,TOOLFACE_EFFICIENCY_PCT,SLIDING_FOOTAGE,SLIDE_PCT_T,SubmitDate,active,rop_aVG_SLIDING, wob_AVG_SLIDING, TOP_DRIVE_RPM_AVG_SLIDING, BIT_RPM_AVG_SLIDING, FLOW_RATE_AVG_SLIDING, diff_pressURE_AVG_SLIDING, pump_pressURE_SLIDING, TOP_DRIVE_TORQUE_AVG_SLIDING,rop_aVG_ROTATING, wob_AVG_ROTATING, TOP_DRIVE_RPM_AVG_ROTATING, BIT_RPM_AVG_ROTATING, diff_pressURE_AVG_ROTATING, FLOW_RATE_AVG_ROTATING, pump_pressURE_ROTATING, TOP_DRIVE_TORQUE_AVG_ROTATING,SLIDE_PCT_D,svy_inc_START,svy_inc_End,BreakdownType) VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)",(WID,AC,IC,BHAN,DN,WSN,MDS,MDE,FD,tvdS,tvdE,FIS,FIE,DIS,DIE,DTS,DTE,TT,DT,ROPA,TFE,SlidFT,SPCT,pdate,1,SROPA,SwobA,STRPMA,SBRPMA,SFRA,SDPA,SPPA,STQA,RROPA,RwobA,RTRPMA,RBRPMA,RFRA,RDPA,RPPA,RTQA,SPCTD,INCS,INCE,BT))
-                    #conn.commit()
-                    drilldata['slide_count']= list(map(lambda x,y: (snum if x>=DTS and x<=DTE else y),drilldata['rig_time'],drilldata['slide_count']))
+                    drilldata['slide_count']= list(map(lambda x,y: (y if x< MDS else snum if x>=MDS and x<=MDE else 0),drilldata['hole_depth'],drilldata['slide_count']))
                     snum += 1
            
     
@@ -181,27 +169,17 @@ def SlideSheet(drilldata):
     Q=I=rnum=0
     BT ="Rotations"
     for I in rend.index:
-       SS = rstart.index[rstart.index < I].max()
-       if SS>Q:
-           Q= int(SS)
+       RS = rstart.index[rstart.index < I].max()
+       if RS>Q:
+           Q= RS
            MDS= float(drilldata.loc[Q, 'hole_depth'])
            MDE= float(drilldata.loc[I, 'hole_depth'])
            FD =float(MDE-MDS)
            if FD >  S_THRESH: 
-                AC = int(18)
-                IC= int(drilldata.loc[Q,'A_interval_code'])
-                BHAN = int(drilldata.loc[Q, 'A_bha_num'])
-                DN = int(drilldata.loc[Q, 'day_num'])
-                WSN = int(drilldata.loc[Q,'stand_count'])
 
                 idata =  drilldata[ drilldata['hole_depth'] <= MDS]; idata =  drilldata[ drilldata['hole_depth'] > MDE]
-                DTS=(idata['rig_time'].iloc[1])
-                DTE=(idata['rig_time'].iloc[-1]) #.strftime("%Y-%m-%d %H:%M:%S")
 
-
-                #c.execute("INSERT INTO ASTRA_ARRAYS (WELL_ID,ARRAY_CODE,INTERVAL_CODE,BHA_NUM,DAY_NUM,WELL_STAND_NUM, hole_depth_START, hole_depth_END,FOOTAGE_DRILLED,tvd_START, tvd_END,FEDR_I_START,FEDR_I_End,DEDR_I_START,DEDR_I_End,DT_START,DT_End,Total_Hours,D_Hours,rop_aVG,TOOLFACE_EFFICIENCY_PCT,SLIDING_FOOTAGE,SLIDE_PCT_T,SubmitDate,active,rop_aVG_SLIDING, wob_AVG_SLIDING, TOP_DRIVE_RPM_AVG_SLIDING, BIT_RPM_AVG_SLIDING, FLOW_RATE_AVG_SLIDING, diff_pressURE_AVG_SLIDING, pump_pressURE_SLIDING, TOP_DRIVE_TORQUE_AVG_SLIDING,rop_aVG_ROTATING, wob_AVG_ROTATING, TOP_DRIVE_RPM_AVG_ROTATING, BIT_RPM_AVG_ROTATING, diff_pressURE_AVG_ROTATING, FLOW_RATE_AVG_ROTATING, pump_pressURE_ROTATING, TOP_DRIVE_TORQUE_AVG_ROTATING,SLIDE_PCT_D,svy_inc_START,svy_inc_End,BreakdownType) VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)",(WID,AC,IC,BHAN,DN,WSN,MDS,MDE,FD,tvdS,tvdE,FIS,FIE,DIS,DIE,DTS,DTE,TT,DT,ROPA,TFE,SlidFT,SPCT,pdate,1,SROPA,SwobA,STRPMA,SBRPMA,SFRA,SDPA,SPPA,STQA,RROPA,RwobA,RTRPMA,RBRPMA,RFRA,RDPA,RPPA,RTQA,SPCTD,INCS,INCE,BT))
-                #conn.commit()
-                drilldata['rot_count']= list(map(lambda x,y: (rnum if x>=DTS and x<=DTE else y),drilldata['rig_time'],drilldata['rot_count']))
+                drilldata['rot_count']= list(map(lambda x,y: (y if x< MDS else rnum if x>=MDS and x<=MDE else 0),drilldata['hole_depth'],drilldata['rot_count']))
                 rnum += 1
 
      #, FOOTAGE_DRILLED, tvd_START, tvd_END, FEDR_I_START, FEDR_I_END, DEDR_I_START, DEDR_I_END, DT_START, DT_END, TOTAL_HOURS, D_HOURS, DC_HOURS, NON_DRILLING_TIME, RT_TIME, svy_inc_START, svy_inc_END, svy_inc_CHANGE, SVY_AZI_START, SVY_AZI_END, SVY_ROW_START, SVY_ROW_END, SVY_VERTICAL_SECTION_START, SVY_VERTICAL_SECTION_END, tvd_CHANGE, PLAN_NORTHING, PLAN_EASTING, STEP_OUT, PLAN_INC_START, PLAN_INC_END, PLAN_INC_CHANGE, PLAN_AZI_START, PLAN_AZI_END, PLAN_ROW_START, PLAN_ROW_END, PLAN_VERTICAL_SECTION_START, PLAN_VERTICAL_SECTION_END, PLAN_tvd_START, PLAN_tvd_END, PLAN_STEP_OUT, DIRECTIONAL_DIFFICULTY, DIRECTION, PERCENT_IN_ZONE, PLANNED_BURS, YIELDED_BURS, PLANNED_DLR, YIELDED_DLR, YIELD_RATIO, PLANNED_COURSE_LENGTH, COURSE_LENGTH, COURSE_LENGTH_DEVIATION, UP_DOWN, RIGHT_LEFT, AHEAD_BEHIND, TOOLFACE_EFFICIENCY_PCT, MOTOR_BUR_YIELD, MOTOR_DLS_YIELD, rop_aVG, wob_AVG, TOP_DRIVE_RPM_AVG, BIT_RPM_AVG, diff_pressURE_AVG, FLOW_RATE_AVG, PRESSURE_AVG, TOP_DRIVE_TORQUE_AVG, NUM_OF_SLIDES, SLIDING_FOOTAGE, AVG_SLIDE_LENGTH, SLIDE_PCT_D, SLIDE_PCT_T, rop_aVG_SLIDING, wob_AVG_SLIDING, TOP_DRIVE_RPM_AVG_SLIDING, BIT_RPM_AVG_SLIDING, FLOW_RATE_AVG_SLIDING, diff_pressURE_AVG_SLIDING, pump_pressURE_SLIDING, TOP_DRIVE_TORQUE_AVG_SLIDING, SIDES_UP_HIGHSIDE_NORTH, SLIDES_RIGHT_EAST, SLIDES_DOWN_LOWSIDE_SOUTH, SLIDES_LEFT_WEST, ROTATING_FOOTAGE, ROTATE_PCT_D, ROTATE_PCT_T, rop_aVG_ROTATING, wob_AVG_ROTATING, TOP_DRIVE_RPM_AVG_ROTATING, BIT_RPM_AVG_ROTATING, diff_pressURE_AVG_ROTATING, FLOW_RATE_AVG_ROTATING, pump_pressURE_ROTATING, TOP_DRIVE_TORQUE_AVG_ROTATING, ROP_RATIO, MAX_ROP, BEST_ROP, ABOVE_AVG_ROP, BELOW_AVG_ROP, MIN_ROP, MAX_wob, BEST_wob, ABOVE_AVG_wob, BELOW_AVG_wob, MIN_wob, MAX_diff_pressURE, BEST_diff_pressURE, ABOVE_AVG_diff_pressURE, BELOW_AVG_diff_pressURE, MIN_diff_pressURE, MAX_BIT_RPMS, BEST_BIT_RPMS, ABOVE_AVG_BIT_RPMS, BELOW_AVG_BIT_RPMS, MIN_BIT_RPMS, ASTRA_ARRAYScol, SubmitDate, active              
