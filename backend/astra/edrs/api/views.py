@@ -5,7 +5,7 @@ from edrs.models import (EDRRaw, EDRProcessed,
                          EDRDrilled, EDRCXN, EDRComment, EDRTrip)
 from edrs.api.serializers import (EDRRawSerializer, EDRProcessedSerializer,
                                   EDRDrilledSerializer, EDRCXNSerializer, EDRTripSerializer,
-                                  EDRCommentSerializer, RTAVerticalSerializer, RTACurveSerializer)
+                                  EDRCommentSerializer, RTAVerticalSerializer, RTACurveSerializer,WellOverviewSerializer)
 from jobs.models import WellConnector
 
 
@@ -61,5 +61,12 @@ class EDRTripViewSet(viewsets.ModelViewSet):
 class EDRCommentViewSet(viewsets.ModelViewSet):
     serializer_class = EDRCommentSerializer
     queryset = EDRComment.objects.all()
+    filter_backends = (DjangoFilterBackend,)
+    filter_fields = '__all__'
+
+
+class WellOverviewViewSet(viewsets.ModelViewSet):
+    serializer_class = WellOverviewSerializer
+    queryset = WellConnector.objects.all()
     filter_backends = (DjangoFilterBackend,)
     filter_fields = '__all__'

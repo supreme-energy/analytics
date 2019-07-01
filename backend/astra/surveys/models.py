@@ -59,13 +59,6 @@ class Survey(models.Model):
         else:
             survey_being_edited = True
 
-        # Set Survey's BHA
-        if self.pk is None and Bha.objects.filter(job=self.job).count() != 0:
-            bhas_on_job = Bha.objects.filter(job=self.job)
-            for bha in bhas_on_job:
-                if (self.md > bha.depth_in and not bha.depth_out) or (self.md > bha.depth_in and self.md < bha.depth_out):
-                    self.bha = bha
-
         # If first survey on job
         if surveys_on_job.count() == 0:
             # print("First Survey on the Job")
