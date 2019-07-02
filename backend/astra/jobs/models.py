@@ -22,7 +22,8 @@ class WellConnector(models.Model):
     job = models.OneToOneField(
         Job, related_name="job_well_connectors", on_delete=models.PROTECT, null=True, blank=True)
     uid = models.CharField(max_length=50)
-    well_name = models.CharField(max_length=50, null=True, blank=True)
+    uidWellbore = models.CharField(max_length=50, null=True, blank=True)
+    well_name = models.CharField(max_length=50)
     rig_name = models.CharField(max_length=50, null=True, blank=True)
     data_frequency = models.IntegerField(null=True, blank=True)
     url = models.CharField(max_length=100, null=True, blank=True)
