@@ -3,22 +3,9 @@
 @author: BrianBlackwell
 """
 import numpy as np
-from numpy import cumsum
-import scipy as sy
-import pylab as pyl
-import os
+
 import pandas as pd
-from pandas.io import gbq
-from datetime import datetime
-import time
-from bokeh.plotting import figure, gridplot, output_file, show
-from bokeh.palettes import Viridis3
-from math import pi
-from bokeh.models import LinearAxis, Range1d, CategoricalColorMapper, ColumnDataSource, HoverTool
-from bokeh.models.widgets import DataTable, DateFormatter, TableColumn ,CheckboxGroup, RangeSlider, Toggle, Panel, Tabs
-from bokeh.io import export_png, show, output_file
-from collections import OrderedDict
-from bokeh.core.properties import value
+
 
 from os.path import dirname, join
 #************************* CONSTANTS   ********************************c*********************************8

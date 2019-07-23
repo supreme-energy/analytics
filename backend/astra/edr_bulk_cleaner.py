@@ -41,7 +41,7 @@ def cleanitup(edrdata,DATA_FREQUENCY):
     edrdata['A_interval_code']=1
     #edrdata['bit RPM']= list(map(lambda x: (1 if x >= 6 and x < 18 else 2), pd.DatetimeIndex(edrdata['rig_time']).hour.astype(int)))
     edrdata['day_num'] = list(map(lambda x: int((x-startdate)/np.timedelta64(1, 'D'))+1, edrdata['rig_time']))
-    edrdata['day_night'] = list(map(lambda x: (1 if x >= 6 and x < 18 else 2), pd.DatetimeIndex(edrdata['rig_time']).hour.astype(int)))
+    edrdata['day_night'] = list(map(lambda x: (True if x >= 6 and x < 18 else False), pd.DatetimeIndex(edrdata['rig_time']).hour.astype(int)))
     edrdata['bit_status']= list(map(lambda w,x,z: (1 if (w-x < BITTHRESH and w>0 and x>0 and  z > 0) else 0), edrdata['hole_depth'],edrdata['bit_depth'],edrdata['rop_i']))
     edrdata['bit_status']= list(map(lambda w,x,y,z: (2 if (w-x < BITTHRESH and w>0 and x>0 and  z > 0 and y <1 ) else (1 if (w-x < BITTHRESH and w>0 and x>0 and  z > 0 ) else (-1 if y > 0 else 0))), edrdata['hole_depth'],edrdata['bit_depth'],edrdata['bit_status'].shift(1),edrdata['rop_i']))
     edrdata['slip_status'] = list(map(lambda w,x: (1 if w<1 and x < hookload_THRESH else 0), edrdata['bit_status'],edrdata['hookload']))
@@ -140,9 +140,9 @@ def trippedit(edrdata,DATA_FREQUENCY,bhas,intervals):
             bha_time = bha_trip['rig_time'].max()
             if len(intervals)>0:
                 for i in range(len(intervals)):
-                    if depth >= intervals.loc[i,'start_depth']-100 and depth <= intervals.loc[i,'end_depth']+100:
+                    if depth >= float(intervals.loc[i,'start_depth'])-100 and depth <= float(intervals.loc[i,'end_depth'])+100:
                         intervalid=intervals.loc[i,'id']
-                    if abs(depth-intervals.loc[i,'start_depth'])<30:
+                    if abs(depth-float(intervals.loc[i,'start_depth']))<30:
                         intervalid1=intervals.loc[i,'id']
                         if prev_depth == depth:
                             intervalid2=intervals.loc[i-1,'id']
@@ -213,9 +213,9 @@ def trippedit(edrdata,DATA_FREQUENCY,bhas,intervals):
             
             if len(intervals)>0:
                 for i in range(len(intervals)):
-                    if depth >= intervals.loc[i,'start_depth']-100 and depth <= intervals.loc[i,'end_depth']+100:
+                    if depth >= float(intervals.loc[i,'start_depth'])-100 and depth <= float(intervals.loc[i,'end_depth'])+100:
                         intervalid=intervals.loc[i,'id']
-                    if abs(depth-intervals.loc[i,'end_depth'])<30:
+                    if abs(depth-float(intervals.loc[i,'end_depth']))<30:
                         intervalid1=intervals.loc[i,'id']
             start_time=current_trip["rig_time"].min()
             end_time =current_trip["rig_time"].max()

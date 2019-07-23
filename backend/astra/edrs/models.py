@@ -17,6 +17,8 @@ class EDRRaw(models.Model):
         auto_now_add=True)  # date generated when created
     rig_time = models.DateTimeField()
     uid = models.CharField(max_length=50)
+    hole_size = models.DecimalField(
+        max_digits=15, decimal_places=6, null=True, blank=True)
     hole_depth = models.DecimalField(
         max_digits=15, decimal_places=6, null=True, blank=True)
     bit_depth = models.DecimalField(

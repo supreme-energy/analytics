@@ -34,11 +34,11 @@ data_frequency = 10
 username = 'sses_us'
 password = 'PolarisTexas'
 url = 'http://witsml.polarisguidance.com:8081/services/polarisWMLS'
-uidWell ='6ab0ff9b-de84-412b-a69c-e784ea3a7951'
-uidWellbore="65f6cccc-4351-437e-be8c-c2244d7abb55"
+uidWell ='ae7ad273-cba4-44ce-a936-20fca8d354a6'
+uidWellbore="ed636b32-2ff9-4546-acd0-481ac83d6256"
 date = parse_datetime("1970-05-26T05:25:18-05:00")
 
-def edrdata(uidWell, date, data_frequency,url,username,password):
+def edrdata(uidWell,uidWellbore, date, data_frequency,url,username,password):
     headers = {'content-type': 'text/xml; charset=utf-8',
                'Content-Length': '8'}
     # print("uidWell = ", uidWell)
@@ -52,7 +52,7 @@ def edrdata(uidWell, date, data_frequency,url,username,password):
         <q1:WMLS_GetFromStore xmlns:q1="http://www.witsml.org/message/120">
           <WMLtypeIn xsi:type="xsd:string">log</WMLtypeIn>
           <QueryIn xsi:type="xsd:string">&lt;logs xmlns="http://www.witsml.org/schemas/131" version="1.3.1.1"&gt;
-      &lt;log uidWell="%s" uidWellbore="65f6cccc-4351-437e-be8c-c2244d7abb55" uid="DATETIME_LOG"&gt;
+      &lt;log uidWell="%s" uidWellbore="%s" uid="DATETIME_LOG"&gt;
         &lt;nameWell /&gt;
         &lt;nameWellbore /&gt;
         &lt;name /&gt;
@@ -121,7 +121,7 @@ def edrdata(uidWell, date, data_frequency,url,username,password):
         </q1:WMLS_GetFromStore>
       </soap:Body>
     </soap:Envelope>
-    """ % (uidWell, date)
+    """ % (uidWell,uidWellbore, date)
 
     response = requests.post(
         url, data=rig_body, headers=headers, auth=(username, password))
@@ -143,6 +143,7 @@ def edrdata(uidWell, date, data_frequency,url,username,password):
 
     witsheader = pd.DataFrame([])
 
+
     for i in range(len(data)):
         x = re.split(r',', data[i].text)
 
@@ -151,25 +152,29 @@ def edrdata(uidWell, date, data_frequency,url,username,password):
 
     witsheader.columns = header_names
 
+
     # print(witsheader)
     ''' this is the order of columns animo wants to map into to allow for merge into edr_raw table'''
-    animo_headers = ['rig_time', 'ann_press', 'rop_a', 'back_press', 'edr_mse', 'bit_depth', 'block_height', 'mud_wi', 'mud_wo', 'diff_press',
-                     'rop_i', 'pump_press', 'flow_in', 'flow_out', 'gamma_ray', 'edr_RS1', 'edr_RS2', 'edr_RS3', 'overpull', 'edr_slips',
-                     'svy_azi', 'tf_grav', 'svy_inc', 'tf_mag', 'hookload', 'td_rpm', 'td_torque', 'mud_ti', 'mud_to', 'hole_depth', 'total_spm',
-                     'strokes_total', 'tvd', 'wob']
+    animo_headers = ['rig_time', 'rop_a','hole_size', 'edr_mse', 'bit_depth', 'block_height', 'diff_press',
+                     'rop_i', 'pump_press', 'flow_in', 'flow_out', 'gamma_ray', 'overpull', 'svy_azi', 'tf_grav', 
+                     'svy_inc', 'tf_mag', 'hookload', 'td_rpm', 'td_torque', 'mud_ti', 'mud_to', 'hole_depth', 
+                     'total_spm', 'strokes_total', 'tvd', 'wob', 'oscillator']
         
-    ''' MISSING SOME NEEDED INFO FOR ANIMO TO RUN FROM LIVE SERVER WHEN FULL LIST IS INTRODUCED THESE MUST MATCH THE ORDER OF EQUIVALENCE TO animo_headers'''
-    sses_headers = [['DateTime', 'GPM', 'GR', 'GAMA', 'TVD', 'SLIDEINDICATOR', 'RPS2R', 'VS', 'RES', 'GTOTAL', 'BITDEPTH', 'FLOWOUT', 'SPP', 'DIP', 'RPM', 'GAS', 'RAD4R', 'TEMP', 'TEMPERATURE', 'CONFIDENCE', 'PULSEAMP', 'TRQ', 'HOOKLOAD', 'RPD2R', 'GTF', 'MTF', 'TRT', 'WOB', 'DEP', 'PMPP', 'INC', 'BLOCKHEIGHT', 'AZM', 'ROP']]
-    
+    ''' SSES Headers'''
+    edrraw = witsheader[['DateTime', 'ROP','HOLEDIAMETER', 'MECHANICALSPECIFICENERGY','BITDEPTH','BLOCKHEIGHT','DIFFERENTIALPRESSURE', 
+                          'EDRINSTANTANEOUSROP','SPP', 'GPM','FLOWOUT','GAMA',  'OVERPULL', 'AZM', 'GTF',
+                          'INC','MTF','HOOKLOAD','RPM','TRQ', 'TEMPERATURE',  'TEMP',  'DEP',
+                          'PUMPTOTALSTROKESRATE','TOTALSTROKESALLPUMPS', 'TVD','WOB',  'SLIDEINDICATOR']]
+
     ''' TOTCO Headers   
-    edrraw = witsheader[['RIGTIME', 'ANN_PRESSURE', 'AVG_ROP_FT_HR', 'Back Pressure', 'Basic MSE', 'BIT_DEPTH', 'BLOCK_POS', 'DENS_IN', 'DENS_OUT',
-                         'DIFF_PRESS', 'FAST_ROP_FT_HR', 'Flow Pressure', 'FLOW_IN', 'FLOW_OUT', 'GAMMA_RAY', 'IADC_RIG_ACTIVITY', 'IADC_RIG_ACTIVITY2',
-                         'IADC_RIG_ACTIVITY3', 'Overpull', 'SLIPS_STAT', 'SRV_AZI', 'SRV_GRA_TF', 'SRV_INC', 'SRV_MAG_TF', 'STRING_WEIGHT', 'TD_SPEED',
+    edrraw = witsheader[['RIGTIME', 'AVG_ROP_FT_HR', 'Basic MSE', 'BIT_DEPTH', 'BLOCK_POS','DIFF_PRESS', 'FAST_ROP_FT_HR', 
+                         'Flow Pressure', 'FLOW_IN', 'FLOW_OUT', 'GAMMA_RAY', 'Overpull', 'SLIPS_STAT', 
+                         'SRV_AZI', 'SRV_GRA_TF', 'SRV_INC', 'SRV_MAG_TF', 'STRING_WEIGHT', 'TD_SPEED',
                          'TD_TORQUE', 'TEMP_IN', 'TEMP_OUT', 'TOT_DPT_MD', 'TOT_SPM', 'TOT_STK', 'TVD', 'WOB']]
 
     '''
     edrraw.columns = animo_headers
-
+    print(edrraw)
     return (edrraw)
 
 
@@ -483,4 +488,4 @@ def surveys(rig_id):
     return (witsheader, uidWell, uidWellbore, well_name, rig_name)
 
 
-edrdata(uidWell, date, data_frequency,url,username,password)
+edrdata(uidWell, uidWellbore,date, data_frequency,url,username,password)
