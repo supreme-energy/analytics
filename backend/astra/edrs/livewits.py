@@ -174,7 +174,6 @@ def edrdata(uidWell,uidWellbore, date, data_frequency,url,username,password):
 
     '''
     edrraw.columns = animo_headers
-    print(edrraw)
     return (edrraw)
 
 
