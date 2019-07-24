@@ -6,6 +6,6 @@ def running_process(process):
     return Process_Existance
 
 def check_process(filename):
-    process = "/var/www/html/SSES-Backend/backend/env/bin/python3 /var/www/html/SSES-Backend/backend/astra/edrs/" + filename + ".py"
+    process = "/var/www/html/SSES-Backend/backend/env/bin/python3 /var/www/html/SSES-Backend/backend/astra/" + filename + ".py"
     condition = running_process(process).rstrip().decode("utf-8")
     return condition
