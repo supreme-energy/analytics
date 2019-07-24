@@ -11,6 +11,8 @@ urlpatterns = [
     path('api/edrcomments/', include('edrs.api.urls.edrcomments')),
     path('api/edrcxn/', include('edrs.api.urls.edrcxn')),
     path('api/edrdrilled/', include('edrs.api.urls.edrdrilled')),
+    path('api/edrdrilled-parameters/',
+         include('edrs.api.urls.edrdrilled-parameters')),
     path('api/edrprocessed/', include('edrs.api.urls.edrprocessed')),
     path('api/edrraw/', include('edrs.api.urls.edrraw')),
     path('api/edrtrip/', include('edrs.api.urls.edrtrip')),

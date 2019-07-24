@@ -59,6 +59,43 @@ class EDRDrilledSerializer(serializers.ModelSerializer):
         fields = '__all__'
         read_only_field = ('id',)
 
+class EDRDrilledParameterSerializer(serializers.ModelSerializer):
+    diff_pressure = serializers.SerializerMethodField(read_only=True, required=False)
+    td_torque = serializers.SerializerMethodField(read_only=True, required=False)
+    td_rpm = serializers.SerializerMethodField(read_only=True, required=False)
+    connection_number = serializers.SerializerMethodField(read_only=True, required=False)
+
+    def get_diff_pressure(self, obj):
+        try: 
+            return obj.edr_raw.diff_pressure
+        except:
+            return ""
+
+    def get_td_torque(self, obj):
+        try: 
+            return obj.edr_raw.td_torque
+        except:
+            return ""
+
+    def get_td_rpm(self, obj):
+        try: 
+            return obj.edr_raw.td_rpm
+        except:
+            return ""
+
+    def get_connection_number(self, obj):
+        try: 
+            edr_process = EDRProcessed.objects.get(edr_raw=obj.edr_raw)
+            return edr_process.cxn_count
+        except:
+            return ""
+
+
+    class Meta:
+        model = EDRDrilled
+        fields = ('rop_a', 'bit_rpm', 'astra_mse', 'slide_count', 'diff_pressure', 'td_torque', 'td_rpm', 'connection_number')
+        read_only_field = ('id',)
+
 
 class RTACurveSerializer(serializers.ModelSerializer):
     job = serializers.SlugRelatedField(
