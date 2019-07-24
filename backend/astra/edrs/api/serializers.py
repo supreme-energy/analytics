@@ -228,46 +228,53 @@ class WellOverviewSerializer(serializers.ModelSerializer):
             surface_on_uid = None
         
         if(surface_on_uid):
-            s_interval_name=surface_on_uid.name
-            s_holesize=surface_on_uid.hole_size
-            s_hole_depth_start=surface_on_uid.start_depth
-            s_hole_depth_end =surface_on_uid.end_depth
+            s_interval_name = surface_on_uid.name
+            s_holesize = surface_on_uid.hole_size
+            s_hole_depth_start = surface_on_uid.start_depth
+            s_hole_depth_end = surface_on_uid.end_depth
 
-            drilled_on_uid = EDRDrilled.objects.filter(uid=obj.uid,edr_raw__hole_depth__gte=s_hole_depth_start, edr_raw__hole_depth__lte=s_hole_depth_end)
-            slide_on_uid = EDRDrilled.objects.filter(uid=obj.uid,edr_raw__hole_depth__gte=s_hole_depth_start, edr_raw__hole_depth__lte=s_hole_depth_end,slide_count__gt=0)
-            rotate_on_uid = EDRDrilled.objects.filter(uid=obj.uid,edr_raw__hole_depth__gte=s_hole_depth_start, edr_raw__hole_depth__lte=s_hole_depth_end,slide_count=0)
+            drilled_on_uid = EDRDrilled.objects.filter(uid=obj.uid, edr_raw__hole_depth__gte=s_hole_depth_start, edr_raw__hole_depth__lte=s_hole_depth_end)
+            slide_on_uid = EDRDrilled.objects.filter(uid=obj.uid, edr_raw__hole_depth__gte=s_hole_depth_start, edr_raw__hole_depth__lte=s_hole_depth_end, slide_count__gt=0)
+            rotate_on_uid = EDRDrilled.objects.filter(uid=obj.uid, edr_raw__hole_depth__gte=s_hole_depth_start, edr_raw__hole_depth__lte=s_hole_depth_end, slide_count=0)
 
-            s_dt_start=drilled_on_uid.aggregate(Min("edr_raw__rig_time")).get('edr_raw__rig_time__min')
-            s_dt_end =drilled_on_uid.aggregate(Max("edr_raw__rig_time")).get('edr_raw__rig_time__max')
-            s_total_hours =(s_dt_end-s_dt_start).total_seconds() / 3600
-            s_drill_hours =len(drilled_on_uid)*obj.data_frequency/ 3600
-            s_rop_avg =drilled_on_uid.aggregate(Avg("rop_a")).get('rop_a__avg')
-      
+            drilled_aggregate = drilled_on_uid.aggregate(Min("edr_raw__rig_time"), Max("edr_raw__rig_time"), Avg("rop_a"))
+
+            s_dt_start = drilled_aggregate.get('edr_raw__rig_time__min')
+            s_dt_end  = drilled_aggregate.get('edr_raw__rig_time__max')
+            s_total_hours = (s_dt_end-s_dt_start).total_seconds() / 3600
+            s_drill_hours = len(drilled_on_uid) * obj.data_frequency / 3600
+            s_rop_avg  = drilled_aggregate.get('rop_a__avg')
+            
             #sliding parameters
-            s_sliding_footage=slide_on_uid.aggregate(Sum("drilled_ft")).get('drilled_ft__sum') if slide_on_uid.aggregate(Sum("drilled_ft")).get('drilled_ft__sum') and slide_on_uid.aggregate(Sum("drilled_ft")).get('drilled_ft__sum')> 0 else 0
-            s_slide_pct_d=s_sliding_footage/(s_hole_depth_end-s_hole_depth_start)*100
-            s_slide_pct_t=len(slide_on_uid)*obj.data_frequency/ 3600 /s_drill_hours
-            s_rop_avg_sliding=slide_on_uid.aggregate(Avg("rop_a")).get('rop_a__avg')
-            s_wob_avg_sliding=slide_on_uid.aggregate(Avg("edr_raw__wob")).get('edr_raw__wob__avg')
-            s_top_drive_rpm_avg_sliding=slide_on_uid.aggregate(Avg("edr_raw__td_rpm")).get('edr_raw__td_rpm__avg')
-            s_bit_rpm_avg_sliding=slide_on_uid.aggregate(Avg("bit_rpm")).get('bit_rpm__avg')
-            s_flow_rate_avg_sliding=slide_on_uid.aggregate(Avg("edr_raw__flow_in")).get('edr_raw__flow_in__avg')
-            s_diff_pressure_avg_sliding=slide_on_uid.aggregate(Avg("edr_raw__diff_press")).get('edr_raw__diff_press__avg')
-            s_pump_pressure_avg_sliding=slide_on_uid.aggregate(Avg("edr_raw__pump_press")).get('edr_raw__pump_press__avg')
-            s_top_drive_torque_avg_sliding=slide_on_uid.aggregate(Avg("edr_raw__td_torque")).get('edr_raw__td_torque__avg')
+            sliding_aggregate = slide_on_uid.aggregate(Sum("drilled_ft"), Avg("rop_a"), Avg("edr_raw__wob"), Avg("edr_raw__td_rpm"), Avg("bit_rpm"), Avg("edr_raw__flow_in"), 
+                                                        Avg("edr_raw__diff_press"), Avg("edr_raw__pump_press"), Avg("edr_raw__td_torque"))
+
+            s_sliding_footage = sliding_aggregate.get('drilled_ft__sum') if sliding_aggregate.get('drilled_ft__sum') and sliding_aggregate.get('drilled_ft__sum') > 0 else 0
+            s_slide_pct_d = s_sliding_footage/(s_hole_depth_end-s_hole_depth_start) * 100
+            s_slide_pct_t = len(slide_on_uid) * obj.data_frequency / 3600 / s_drill_hours
+            s_rop_avg_sliding = sliding_aggregate.get('rop_a__avg')
+            s_wob_avg_sliding = sliding_aggregate.get('edr_raw__wob__avg')
+            s_top_drive_rpm_avg_sliding = sliding_aggregate.get('edr_raw__td_rpm__avg')
+            s_bit_rpm_avg_sliding = sliding_aggregate.get('bit_rpm__avg')
+            s_flow_rate_avg_sliding = sliding_aggregate.get('edr_raw__flow_in__avg')
+            s_diff_pressure_avg_sliding = sliding_aggregate.get('edr_raw__diff_press__avg')
+            s_pump_pressure_avg_sliding = sliding_aggregate.get('edr_raw__pump_press__avg')
+            s_top_drive_torque_avg_sliding = sliding_aggregate.get('edr_raw__td_torque__avg')
 
             #rotating parameters
-            s_rotating_footage=s_hole_depth_end-s_hole_depth_start-s_sliding_footage
-            s_rotate_pct_d=100-s_slide_pct_d
-            s_rotate_pct_t=100-s_slide_pct_t
-            s_rop_avg_rotating=rotate_on_uid.aggregate(Avg("rop_a")).get('rop_a__avg')
-            s_wob_avg_rotating=rotate_on_uid.aggregate(Avg("edr_raw__wob")).get('edr_raw__wob__avg')
-            s_top_drive_rpm_avg_rotating=rotate_on_uid.aggregate(Avg("edr_raw__td_rpm")).get('edr_raw__td_rpm__avg')
-            s_bit_rpm_avg_rotating=rotate_on_uid.aggregate(Avg("bit_rpm")).get('bit_rpm__avg')
-            s_flow_rate_avg_rotating=rotate_on_uid.aggregate(Avg("edr_raw__flow_in")).get('edr_raw__flow_in__avg')
-            s_diff_pressure_avg_rotating=rotate_on_uid.aggregate(Avg("edr_raw__diff_press")).get('edr_raw__diff_press__avg')
-            s_pump_pressure_avg_rotating=rotate_on_uid.aggregate(Avg("edr_raw__pump_press")).get('edr_raw__pump_press__avg')
-            s_top_drive_torque_avg_rotating=rotate_on_uid.aggregate(Avg("edr_raw__td_torque")).get('edr_raw__td_torque__avg')
+            rotating_aggregate = rotate_on_uid.aggregate(Sum("drilled_ft"), Avg("rop_a"), Avg("edr_raw__wob"), Avg("edr_raw__td_rpm"), Avg("bit_rpm"), Avg("edr_raw__flow_in"), 
+                                                        Avg("edr_raw__diff_press"), Avg("edr_raw__pump_press"), Avg("edr_raw__td_torque"))
+            s_rotating_footage = s_hole_depth_end - s_hole_depth_start - s_sliding_footage
+            s_rotate_pct_d = 100 - s_slide_pct_d
+            s_rotate_pct_t = 100 - s_slide_pct_t
+            s_rop_avg_rotating = rotating_aggregate.get('rop_a__avg')
+            s_wob_avg_rotating = rotating_aggregate.get('edr_raw__wob__avg')
+            s_top_drive_rpm_avg_rotating = rotating_aggregate.get('edr_raw__td_rpm__avg')
+            s_bit_rpm_avg_rotating = rotating_aggregate.get('bit_rpm__avg')
+            s_flow_rate_avg_rotating = rotating_aggregate.get('edr_raw__flow_in__avg')
+            s_diff_pressure_avg_rotating = rotating_aggregate.get('edr_raw__diff_press__avg')
+            s_pump_pressure_avg_rotating = rotating_aggregate.get('edr_raw__pump_press__avg')
+            s_top_drive_torque_avg_rotating = rotating_aggregate.get('edr_raw__td_torque__avg')
 
         surface = {
             "interval_name": s_interval_name,
@@ -316,18 +323,18 @@ class WellOverviewSerializer(serializers.ModelSerializer):
 
     def get_intermediate(self, obj):
 
-        I1_interval_name=I1_holesize=I1_hole_depth_start=I1_hole_depth_end =0
-        I1_dt_start= I1_dt_end =I1_total_hours =I1_drill_hours =I1_svy_inc_start =I1_svy_inc_end =I1_rop_avg =0
+        I1_interval_name = I1_holesize = I1_hole_depth_start = I1_hole_depth_end = 0
+        I1_dt_start = I1_dt_end = I1_total_hours = I1_drill_hours = I1_svy_inc_start = I1_svy_inc_end = I1_rop_avg = 0
 
         #sliding parameters
-        I1_sliding_footage=I1_slide_pct_d=I1_slide_pct_t=I1_rop_avg_sliding=I1_wob_avg_sliding=0
-        I1_top_drive_rpm_avg_sliding=I1_bit_rpm_avg_sliding=I1_flow_rate_avg_sliding=0
-        I1_diff_pressure_avg_sliding=I1_pump_pressure_avg_sliding=I1_top_drive_torque_avg_sliding=0
+        I1_sliding_footage = I1_slide_pct_d = I1_slide_pct_t = I1_rop_avg_sliding = I1_wob_avg_sliding = 0
+        I1_top_drive_rpm_avg_sliding = I1_bit_rpm_avg_sliding = I1_flow_rate_avg_sliding = 0
+        I1_diff_pressure_avg_sliding = I1_pump_pressure_avg_sliding = I1_top_drive_torque_avg_sliding = 0
 
         #rotating parameters
-        I1_rotating_footage=I1_rotate_pct_d=I1_rotate_pct_t=I1_rop_avg_rotating=I1_wob_avg_rotating=0
-        I1_top_drive_rpm_avg_rotating=I1_bit_rpm_avg_rotating=I1_flow_rate_avg_rotating=0
-        I1_diff_pressure_avg_rotating=I1_pump_pressure_avg_rotating=I1_top_drive_torque_avg_rotating=0
+        I1_rotating_footage = I1_rotate_pct_d = I1_rotate_pct_t = I1_rop_avg_rotating = I1_wob_avg_rotating = 0
+        I1_top_drive_rpm_avg_rotating = I1_bit_rpm_avg_rotating = I1_flow_rate_avg_rotating = 0
+        I1_diff_pressure_avg_rotating = I1_pump_pressure_avg_rotating = I1_top_drive_torque_avg_rotating = 0
 
 
         try:
@@ -336,46 +343,54 @@ class WellOverviewSerializer(serializers.ModelSerializer):
             intermediate_on_uid = None
         
         if(intermediate_on_uid):
-            I1_interval_name=intermediate_on_uid.name
-            I1_holesize=intermediate_on_uid.hole_size
-            I1_hole_depth_start=intermediate_on_uid.start_depth
-            I1_hole_depth_end =intermediate_on_uid.end_depth
+            I1_interval_name = intermediate_on_uid.name
+            I1_holesize = intermediate_on_uid.hole_size
+            I1_hole_depth_start = intermediate_on_uid.start_depth
+            I1_hole_depth_end = intermediate_on_uid.end_depth
 
-            drilled_on_uid = EDRDrilled.objects.filter(uid=obj.uid,edr_raw__hole_depth__gte=I1_hole_depth_start, edr_raw__hole_depth__lte=I1_hole_depth_end)
-            slide_on_uid = EDRDrilled.objects.filter(uid=obj.uid,edr_raw__hole_depth__gte=I1_hole_depth_start, edr_raw__hole_depth__lte=I1_hole_depth_end,slide_count__gt=0)
-            rotate_on_uid = EDRDrilled.objects.filter(uid=obj.uid,edr_raw__hole_depth__gte=I1_hole_depth_start, edr_raw__hole_depth__lte=I1_hole_depth_end,slide_count=0)
+            drilled_on_uid = EDRDrilled.objects.filter(uid=obj.uid, edr_raw__hole_depth__gte=I1_hole_depth_start, edr_raw__hole_depth__lte=I1_hole_depth_end)
+            slide_on_uid = EDRDrilled.objects.filter(uid=obj.uid, edr_raw__hole_depth__gte=I1_hole_depth_start, edr_raw__hole_depth__lte=I1_hole_depth_end,slide_count__gt=0)
+            rotate_on_uid = EDRDrilled.objects.filter(uid=obj.uid, edr_raw__hole_depth__gte=I1_hole_depth_start, edr_raw__hole_depth__lte=I1_hole_depth_end,slide_count=0)
 
-            I1_dt_start=drilled_on_uid.aggregate(Min("edr_raw__rig_time")).get('edr_raw__rig_time__min')
-            I1_dt_end =drilled_on_uid.aggregate(Max("edr_raw__rig_time")).get('edr_raw__rig_time__max')
-            I1_total_hours =(I1_dt_end-I1_dt_start).total_seconds() / 3600
-            I1_drill_hours =len(drilled_on_uid)*obj.data_frequency/ 3600
-            I1_rop_avg =drilled_on_uid.aggregate(Avg("rop_a")).get('rop_a__avg')
-      
+            drilled_aggregates = drilled_on_uid.aggregate(Min("edr_raw__rig_time"), Max("edr_raw__rig_time"), Avg("rop_a"))
+
+            I1_dt_start = drilled_aggregates.get('edr_raw__rig_time__min')
+            I1_dt_end = drilled_aggregates.get('edr_raw__rig_time__max')
+            I1_total_hours = (I1_dt_end-I1_dt_start).total_seconds() / 3600
+            I1_drill_hours = len(drilled_on_uid)*obj.data_frequency / 3600
+            I1_rop_avg = drilled_aggregates.get('rop_a__avg')
+
+
             #sliding parameters
-            I1_sliding_footage=slide_on_uid.aggregate(Sum("drilled_ft")).get('drilled_ft__sum') if slide_on_uid.aggregate(Sum("drilled_ft")).get('drilled_ft__sum') and slide_on_uid.aggregate(Sum("drilled_ft")).get('drilled_ft__sum')> 0 else 0
-            I1_slide_pct_d=I1_sliding_footage/(I1_hole_depth_end-I1_hole_depth_start)*100
-            I1_slide_pct_t=len(slide_on_uid)*obj.data_frequency/ 3600 /I1_drill_hours
-            I1_rop_avg_sliding=slide_on_uid.aggregate(Avg("rop_a")).get('rop_a__avg')
-            I1_wob_avg_sliding=slide_on_uid.aggregate(Avg("edr_raw__wob")).get('edr_raw__wob__avg')
-            I1_top_drive_rpm_avg_sliding=slide_on_uid.aggregate(Avg("edr_raw__td_rpm")).get('edr_raw__td_rpm__avg')
-            I1_bit_rpm_avg_sliding=slide_on_uid.aggregate(Avg("bit_rpm")).get('bit_rpm__avg')
-            I1_flow_rate_avg_sliding=slide_on_uid.aggregate(Avg("edr_raw__flow_in")).get('edr_raw__flow_in__avg')
-            I1_diff_pressure_avg_sliding=slide_on_uid.aggregate(Avg("edr_raw__diff_press")).get('edr_raw__diff_press__avg')
-            I1_pump_pressure_avg_sliding=slide_on_uid.aggregate(Avg("edr_raw__pump_press")).get('edr_raw__pump_press__avg')
-            I1_top_drive_torque_avg_sliding=slide_on_uid.aggregate(Avg("edr_raw__td_torque")).get('edr_raw__td_torque__avg')
+            sliding_aggregate = slide_on_uid.aggregate(Sum("drilled_ft"), Avg("rop_a"), Avg("edr_raw__wob"), Avg("edr_raw__td_rpm"), Avg("bit_rpm"), Avg("edr_raw__flow_in"), 
+                                                        Avg("edr_raw__diff_press"), Avg("edr_raw__pump_press"), Avg("edr_raw__td_torque"))
+
+            I1_sliding_footage = sliding_aggregate.get('drilled_ft__sum') if sliding_aggregate.get('drilled_ft__sum') and sliding_aggregate.get('drilled_ft__sum') > 0 else 0
+            I1_slide_pct_d = I1_sliding_footage/(I1_hole_depth_end-I1_hole_depth_start) * 100
+            I1_slide_pct_t = len(slide_on_uid)*obj.data_frequency/ 3600 / I1_drill_hours
+            I1_rop_avg_sliding = sliding_aggregate.get('rop_a__avg')
+            I1_wob_avg_sliding = sliding_aggregate.get('edr_raw__wob__avg')
+            I1_top_drive_rpm_avg_sliding = sliding_aggregate.get('edr_raw__td_rpm__avg')
+            I1_bit_rpm_avg_sliding = sliding_aggregate.get('bit_rpm__avg')
+            I1_flow_rate_avg_sliding = sliding_aggregate.get('edr_raw__flow_in__avg')
+            I1_diff_pressure_avg_sliding = sliding_aggregate.get('edr_raw__diff_press__avg')
+            I1_pump_pressure_avg_sliding = sliding_aggregate.get('edr_raw__pump_press__avg')
+            I1_top_drive_torque_avg_sliding = sliding_aggregate.get('edr_raw__td_torque__avg')
 
             #rotating parameters
-            I1_rotating_footage=I1_hole_depth_end-I1_hole_depth_start-I1_sliding_footage
-            I1_rotate_pct_d=100-I1_slide_pct_d
-            I1_rotate_pct_t=100-I1_slide_pct_t
-            I1_rop_avg_rotating=rotate_on_uid.aggregate(Avg("rop_a")).get('rop_a__avg')
-            I1_wob_avg_rotating=rotate_on_uid.aggregate(Avg("edr_raw__wob")).get('edr_raw__wob__avg')
-            I1_top_drive_rpm_avg_rotating=rotate_on_uid.aggregate(Avg("edr_raw__td_rpm")).get('edr_raw__td_rpm__avg')
-            I1_bit_rpm_avg_rotating=rotate_on_uid.aggregate(Avg("bit_rpm")).get('bit_rpm__avg')
-            I1_flow_rate_avg_rotating=rotate_on_uid.aggregate(Avg("edr_raw__flow_in")).get('edr_raw__flow_in__avg')
-            I1_diff_pressure_avg_rotating=rotate_on_uid.aggregate(Avg("edr_raw__diff_press")).get('edr_raw__diff_press__avg')
-            I1_pump_pressure_avg_rotating=rotate_on_uid.aggregate(Avg("edr_raw__pump_press")).get('edr_raw__pump_press__avg')
-            I1_top_drive_torque_avg_rotating=rotate_on_uid.aggregate(Avg("edr_raw__td_torque")).get('edr_raw__td_torque__avg')
+            rotating_aggregate = rotate_on_uid.aggregate(Avg("rop_a"), Avg("edr_raw__wob"), Avg("edr_raw__td_rpm"), Avg("bit_rpm"), Avg("edr_raw__flow_in"), 
+                                                        Avg("edr_raw__diff_press"), Avg("edr_raw__pump_press"), Avg("edr_raw__td_torque"))
+            I1_rotating_footage = I1_hole_depth_end - I1_hole_depth_start - I1_sliding_footage
+            I1_rotate_pct_d = 100 - I1_slide_pct_d
+            I1_rotate_pct_t = 100 - I1_slide_pct_t
+            I1_rop_avg_rotating = rotating_aggregate.get('rop_a__avg')
+            I1_wob_avg_rotating = rotating_aggregate.get('edr_raw__wob__avg')
+            I1_top_drive_rpm_avg_rotating = rotating_aggregate.get('edr_raw__td_rpm__avg')
+            I1_bit_rpm_avg_rotating = rotating_aggregate.get('bit_rpm__avg')
+            I1_flow_rate_avg_rotating = rotating_aggregate.get('edr_raw__flow_in__avg')
+            I1_diff_pressure_avg_rotating = rotating_aggregate.get('edr_raw__diff_press__avg')
+            I1_pump_pressure_avg_rotating = rotating_aggregate.get('edr_raw__pump_press__avg')
+            I1_top_drive_torque_avg_rotating = rotating_aggregate.get('edr_raw__td_torque__avg')
 
         intermediate = {
             "interval_name": I1_interval_name,
@@ -423,7 +438,7 @@ class WellOverviewSerializer(serializers.ModelSerializer):
 
     def get_curve(self, obj):
 
-        c_interval_name=c_holesize=c_hole_depth_start=c_hole_depth_end =0
+        c_interval_name = c_holesize = c_hole_depth_start = c_hole_depth_end = 0
         c_dt_start= c_dt_end =c_total_hours =c_drill_hours =c_svy_inc_start =c_svy_inc_end =c_rop_avg =0
 
         #sliding parameters
@@ -443,46 +458,53 @@ class WellOverviewSerializer(serializers.ModelSerializer):
             curve_on_uid = None
         
         if(curve_on_uid):
-            c_interval_name=curve_on_uid.name
-            c_holesize=curve_on_uid.hole_size
-            c_hole_depth_start=curve_on_uid.start_depth
-            c_hole_depth_end =curve_on_uid.end_depth
+            c_interval_name = curve_on_uid.name
+            c_holesize = curve_on_uid.hole_size
+            c_hole_depth_start = curve_on_uid.start_depth
+            c_hole_depth_end = curve_on_uid.end_depth
 
-            drilled_on_uid = EDRDrilled.objects.filter(uid=obj.uid,edr_raw__hole_depth__gte=c_hole_depth_start, edr_raw__hole_depth__lte=c_hole_depth_end)
-            slide_on_uid = EDRDrilled.objects.filter(uid=obj.uid,edr_raw__hole_depth__gte=c_hole_depth_start, edr_raw__hole_depth__lte=c_hole_depth_end,slide_count__gt=0)
-            rotate_on_uid = EDRDrilled.objects.filter(uid=obj.uid,edr_raw__hole_depth__gte=c_hole_depth_start, edr_raw__hole_depth__lte=c_hole_depth_end,slide_count=0)
+            drilled_on_uid = EDRDrilled.objects.filter(uid=obj.uid, edr_raw__hole_depth__gte=c_hole_depth_start, edr_raw__hole_depth__lte=c_hole_depth_end)
+            slide_on_uid = EDRDrilled.objects.filter(uid=obj.uid, edr_raw__hole_depth__gte=c_hole_depth_start, edr_raw__hole_depth__lte=c_hole_depth_end, slide_count__gt=0)
+            rotate_on_uid = EDRDrilled.objects.filter(uid=obj.uid, edr_raw__hole_depth__gte=c_hole_depth_start, edr_raw__hole_depth__lte=c_hole_depth_end, slide_count=0)
 
-            c_dt_start=drilled_on_uid.aggregate(Min("edr_raw__rig_time")).get('edr_raw__rig_time__min')
-            c_dt_end =drilled_on_uid.aggregate(Max("edr_raw__rig_time")).get('edr_raw__rig_time__max')
+            drilled_aggregate = drilled_on_uid.aggregate(Min("edr_raw__rig_time"), Max("edr_raw__rig_time"), Avg("rop_a"))
+            
+            c_dt_start= drilled_aggregate.get('edr_raw__rig_time__min')
+            c_dt_end = drilled_aggregate.get('edr_raw__rig_time__max')
             c_total_hours =(c_dt_end-c_dt_start).total_seconds() / 3600
-            c_drill_hours =len(drilled_on_uid)*obj.data_frequency/ 3600
-            c_rop_avg =drilled_on_uid.aggregate(Avg("rop_a")).get('rop_a__avg')
+            c_drill_hours =  len(drilled_on_uid)*obj.data_frequency / 3600
+            c_rop_avg = drilled_aggregate.get('rop_a__avg')
       
             #sliding parameters
-            c_sliding_footage=slide_on_uid.aggregate(Sum("drilled_ft")).get('drilled_ft__sum') if slide_on_uid.aggregate(Sum("drilled_ft")).get('drilled_ft__sum') and slide_on_uid.aggregate(Sum("drilled_ft")).get('drilled_ft__sum')> 0 else 0
-            c_slide_pct_d=c_sliding_footage/(c_hole_depth_end-c_hole_depth_start)*100
-            c_slide_pct_t=len(slide_on_uid)*obj.data_frequency/ 3600 /c_drill_hours
-            c_rop_avg_sliding=slide_on_uid.aggregate(Avg("rop_a")).get('rop_a__avg')
-            c_wob_avg_sliding=slide_on_uid.aggregate(Avg("edr_raw__wob")).get('edr_raw__wob__avg')
-            c_top_drive_rpm_avg_sliding=slide_on_uid.aggregate(Avg("edr_raw__td_rpm")).get('edr_raw__td_rpm__avg')
-            c_bit_rpm_avg_sliding=slide_on_uid.aggregate(Avg("bit_rpm")).get('bit_rpm__avg')
-            c_flow_rate_avg_sliding=slide_on_uid.aggregate(Avg("edr_raw__flow_in")).get('edr_raw__flow_in__avg')
-            c_diff_pressure_avg_sliding=slide_on_uid.aggregate(Avg("edr_raw__diff_press")).get('edr_raw__diff_press__avg')
-            c_pump_pressure_avg_sliding=slide_on_uid.aggregate(Avg("edr_raw__pump_press")).get('edr_raw__pump_press__avg')
-            c_top_drive_torque_avg_sliding=slide_on_uid.aggregate(Avg("edr_raw__td_torque")).get('edr_raw__td_torque__avg')
+            sliding_aggregate = slide_on_uid.aggregate(Sum("drilled_ft"), Avg("rop_a"), Avg("edr_raw__wob"), Avg("edr_raw__td_rpm"), Avg("bit_rpm"), Avg("edr_raw__flow_in"), 
+                                                        Avg("edr_raw__diff_press"), Avg("edr_raw__pump_press"), Avg("edr_raw__td_torque"))
+
+            c_sliding_footage = sliding_aggregate.get('drilled_ft__sum') if sliding_aggregate.get('drilled_ft__sum') and sliding_aggregate.get('drilled_ft__sum') > 0 else 0
+            c_slide_pct_d = c_sliding_footage / (c_hole_depth_end-c_hole_depth_start) * 100
+            c_slide_pct_t = len(slide_on_uid) * obj.data_frequency / 3600 / c_drill_hours
+            c_rop_avg_sliding = sliding_aggregate.get('rop_a__avg')
+            c_wob_avg_sliding = sliding_aggregate.get('edr_raw__wob__avg')
+            c_top_drive_rpm_avg_sliding = sliding_aggregate.get('edr_raw__td_rpm__avg')
+            c_bit_rpm_avg_sliding = sliding_aggregate.get('bit_rpm__avg')
+            c_flow_rate_avg_sliding = sliding_aggregate.get('edr_raw__flow_in__avg')
+            c_diff_pressure_avg_sliding = sliding_aggregate.get('edr_raw__diff_press__avg')
+            c_pump_pressure_avg_sliding = sliding_aggregate.get('edr_raw__pump_press__avg')
+            c_top_drive_torque_avg_sliding = sliding_aggregate.get('edr_raw__td_torque__avg')
 
             #rotating parameters
-            c_rotating_footage=c_hole_depth_end-c_hole_depth_start-c_sliding_footage
-            c_rotate_pct_d=100-c_slide_pct_d
-            c_rotate_pct_t=100-c_slide_pct_t
-            c_rop_avg_rotating=rotate_on_uid.aggregate(Avg("rop_a")).get('rop_a__avg')
-            c_wob_avg_rotating=rotate_on_uid.aggregate(Avg("edr_raw__wob")).get('edr_raw__wob__avg')
-            c_top_drive_rpm_avg_rotating=rotate_on_uid.aggregate(Avg("edr_raw__td_rpm")).get('edr_raw__td_rpm__avg')
-            c_bit_rpm_avg_rotating=rotate_on_uid.aggregate(Avg("bit_rpm")).get('bit_rpm__avg')
-            c_flow_rate_avg_rotating=rotate_on_uid.aggregate(Avg("edr_raw__flow_in")).get('edr_raw__flow_in__avg')
-            c_diff_pressure_avg_rotating=rotate_on_uid.aggregate(Avg("edr_raw__diff_press")).get('edr_raw__diff_press__avg')
-            c_pump_pressure_avg_rotating=rotate_on_uid.aggregate(Avg("edr_raw__pump_press")).get('edr_raw__pump_press__avg')
-            c_top_drive_torque_avg_rotating=rotate_on_uid.aggregate(Avg("edr_raw__td_torque")).get('edr_raw__td_torque__avg')
+            rotating_aggregate = rotate_on_uid.aggregate(Avg("rop_a"), Avg("edr_raw__wob"), Avg("edr_raw__td_rpm"), Avg("bit_rpm"), Avg("edr_raw__flow_in"), 
+                                                        Avg("edr_raw__diff_press"), Avg("edr_raw__pump_press"), Avg("edr_raw__td_torque"))
+            c_rotating_footage = c_hole_depth_end-c_hole_depth_start-c_sliding_footage
+            c_rotate_pct_d = 100-c_slide_pct_d
+            c_rotate_pct_t = 100-c_slide_pct_t
+            c_rop_avg_rotating = rotating_aggregate.get('rop_a__avg')
+            c_wob_avg_rotating = rotating_aggregate.get('edr_raw__wob__avg')
+            c_top_drive_rpm_avg_rotating = rotating_aggregate.get('edr_raw__td_rpm__avg')
+            c_bit_rpm_avg_rotating = rotating_aggregate.get('bit_rpm__avg')
+            c_flow_rate_avg_rotating = rotating_aggregate.get('edr_raw__flow_in__avg')
+            c_diff_pressure_avg_rotating = rotating_aggregate.get('edr_raw__diff_press__avg')
+            c_pump_pressure_avg_rotating = rotating_aggregate.get('edr_raw__pump_press__avg')
+            c_top_drive_torque_avg_rotating = rotating_aggregate.get('edr_raw__td_torque__avg')
 
         curve = {
             "interval_name": c_interval_name,
@@ -559,37 +581,43 @@ class WellOverviewSerializer(serializers.ModelSerializer):
             slide_on_uid = EDRDrilled.objects.filter(uid=obj.uid,edr_raw__hole_depth__gte=l_hole_depth_start, edr_raw__hole_depth__lte=l_hole_depth_end,slide_count__gt=0)
             rotate_on_uid = EDRDrilled.objects.filter(uid=obj.uid,edr_raw__hole_depth__gte=l_hole_depth_start, edr_raw__hole_depth__lte=l_hole_depth_end,slide_count=0)
 
-            l_dt_start=drilled_on_uid.aggregate(Min("edr_raw__rig_time")).get('edr_raw__rig_time__min')
-            l_dt_end =drilled_on_uid.aggregate(Max("edr_raw__rig_time")).get('edr_raw__rig_time__max')
+            drilled_aggregate = drilled_on_uid.aggregate(Min("edr_raw__rig_time"), Max("edr_raw__rig_time"), Avg("rop_a"))
+
+            l_dt_start=drilled_aggregate.get('edr_raw__rig_time__min')
+            l_dt_end =drilled_aggregate.get('edr_raw__rig_time__max')
             l_total_hours =(l_dt_end-l_dt_start).total_seconds() / 3600
             l_drill_hours =len(drilled_on_uid)*obj.data_frequency/ 3600
-            l_rop_avg =drilled_on_uid.aggregate(Avg("rop_a")).get('rop_a__avg')
+            l_rop_avg =drilled_aggregate.get('rop_a__avg')
       
             #sliding parameters
-            l_sliding_footage=slide_on_uid.aggregate(Sum("drilled_ft")).get('drilled_ft__sum') if slide_on_uid.aggregate(Sum("drilled_ft")).get('drilled_ft__sum') and slide_on_uid.aggregate(Sum("drilled_ft")).get('drilled_ft__sum')> 0 else 0
+            sliding_aggregate = slide_on_uid.aggregate(Sum("drilled_ft"), Avg("rop_a"), Avg("edr_raw__wob"), Avg("edr_raw__td_rpm"), Avg("bit_rpm"), Avg("edr_raw__flow_in"), 
+                                                        Avg("edr_raw__diff_press"), Avg("edr_raw__pump_press"), Avg("edr_raw__td_torque"))
+            l_sliding_footage=sliding_aggregate.get('drilled_ft__sum') if sliding_aggregate.get('drilled_ft__sum') and sliding_aggregate.get('drilled_ft__sum')> 0 else 0
             l_slide_pct_d=l_sliding_footage/(l_hole_depth_end-l_hole_depth_start)*100
             l_slide_pct_t=len(slide_on_uid)*obj.data_frequency/ 3600 /l_drill_hours
-            l_rop_avg_sliding=slide_on_uid.aggregate(Avg("rop_a")).get('rop_a__avg')
-            l_wob_avg_sliding=slide_on_uid.aggregate(Avg("edr_raw__wob")).get('edr_raw__wob__avg')
-            l_top_drive_rpm_avg_sliding=slide_on_uid.aggregate(Avg("edr_raw__td_rpm")).get('edr_raw__td_rpm__avg')
-            l_bit_rpm_avg_sliding=slide_on_uid.aggregate(Avg("bit_rpm")).get('bit_rpm__avg')
-            l_flow_rate_avg_sliding=slide_on_uid.aggregate(Avg("edr_raw__flow_in")).get('edr_raw__flow_in__avg')
-            l_diff_pressure_avg_sliding=slide_on_uid.aggregate(Avg("edr_raw__diff_press")).get('edr_raw__diff_press__avg')
-            l_pump_pressure_avg_sliding=slide_on_uid.aggregate(Avg("edr_raw__pump_press")).get('edr_raw__pump_press__avg')
-            l_top_drive_torque_avg_sliding=slide_on_uid.aggregate(Avg("edr_raw__td_torque")).get('edr_raw__td_torque__avg')
+            l_rop_avg_sliding=sliding_aggregate.get('rop_a__avg')
+            l_wob_avg_sliding=sliding_aggregate.get('edr_raw__wob__avg')
+            l_top_drive_rpm_avg_sliding=sliding_aggregate.get('edr_raw__td_rpm__avg')
+            l_bit_rpm_avg_sliding=sliding_aggregate.get('bit_rpm__avg')
+            l_flow_rate_avg_sliding=sliding_aggregate.get('edr_raw__flow_in__avg')
+            l_diff_pressure_avg_sliding=sliding_aggregate.get('edr_raw__diff_press__avg')
+            l_pump_pressure_avg_sliding=sliding_aggregate.get('edr_raw__pump_press__avg')
+            l_top_drive_torque_avg_sliding=sliding_aggregate.get('edr_raw__td_torque__avg')
 
             #rotating parameters
+            rotating_aggregate = rotate_on_uid.aggregate(Avg("rop_a"), Avg("edr_raw__wob"), Avg("edr_raw__td_rpm"), Avg("bit_rpm"), Avg("edr_raw__flow_in"), 
+                                                        Avg("edr_raw__diff_press"), Avg("edr_raw__pump_press"), Avg("edr_raw__td_torque"))
             l_rotating_footage=l_hole_depth_end-l_hole_depth_start-l_sliding_footage
             l_rotate_pct_d=100-l_slide_pct_d
             l_rotate_pct_t=100-l_slide_pct_t
-            l_rop_avg_rotating=rotate_on_uid.aggregate(Avg("rop_a")).get('rop_a__avg')
-            l_wob_avg_rotating=rotate_on_uid.aggregate(Avg("edr_raw__wob")).get('edr_raw__wob__avg')
-            l_top_drive_rpm_avg_rotating=rotate_on_uid.aggregate(Avg("edr_raw__td_rpm")).get('edr_raw__td_rpm__avg')
-            l_bit_rpm_avg_rotating=rotate_on_uid.aggregate(Avg("bit_rpm")).get('bit_rpm__avg')
-            l_flow_rate_avg_rotating=rotate_on_uid.aggregate(Avg("edr_raw__flow_in")).get('edr_raw__flow_in__avg')
-            l_diff_pressure_avg_rotating=rotate_on_uid.aggregate(Avg("edr_raw__diff_press")).get('edr_raw__diff_press__avg')
-            l_pump_pressure_avg_rotating=rotate_on_uid.aggregate(Avg("edr_raw__pump_press")).get('edr_raw__pump_press__avg')
-            l_top_drive_torque_avg_rotating=rotate_on_uid.aggregate(Avg("edr_raw__td_torque")).get('edr_raw__td_torque__avg')
+            l_rop_avg_rotating=rotating_aggregate.get('rop_a__avg')
+            l_wob_avg_rotating=rotating_aggregate.get('edr_raw__wob__avg')
+            l_top_drive_rpm_avg_rotating=rotating_aggregate.get('edr_raw__td_rpm__avg')
+            l_bit_rpm_avg_rotating=rotating_aggregate.get('bit_rpm__avg')
+            l_flow_rate_avg_rotating=rotating_aggregate.get('edr_raw__flow_in__avg')
+            l_diff_pressure_avg_rotating=rotating_aggregate.get('edr_raw__diff_press__avg')
+            l_pump_pressure_avg_rotating=rotating_aggregate.get('edr_raw__pump_press__avg')
+            l_top_drive_torque_avg_rotating=rotating_aggregate.get('edr_raw__td_torque__avg')
 
         lateral = {
             "interval_name": l_interval_name,
@@ -665,37 +693,43 @@ class WellOverviewSerializer(serializers.ModelSerializer):
             slide_on_uid = EDRDrilled.objects.filter(uid=obj.uid,edr_raw__hole_depth__gte=t_hole_depth_start, edr_raw__hole_depth__lte=t_hole_depth_end,slide_count__gt=0)
             rotate_on_uid = EDRDrilled.objects.filter(uid=obj.uid,edr_raw__hole_depth__gte=t_hole_depth_start, edr_raw__hole_depth__lte=t_hole_depth_end,slide_count=0)
 
-            t_dt_start=drilled_on_uid.aggregate(Min("edr_raw__rig_time")).get('edr_raw__rig_time__min')
-            t_dt_end =drilled_on_uid.aggregate(Max("edr_raw__rig_time")).get('edr_raw__rig_time__max')
+            drilled_aggregate = drilled_on_uid.aggregate(Min("edr_raw__rig_time"), Max("edr_raw__rig_time"), Avg("rop_a"))
+
+            t_dt_start=drilled_aggregate.get('edr_raw__rig_time__min')
+            t_dt_end =drilled_aggregate.get('edr_raw__rig_time__max')
             t_total_hours =(t_dt_end-t_dt_start).total_seconds() / 3600
             t_drill_hours =len(drilled_on_uid)*obj.data_frequency/ 3600
-            t_rop_avg =drilled_on_uid.aggregate(Avg("rop_a")).get('rop_a__avg')
+            t_rop_avg =drilled_aggregate.get('rop_a__avg')
       
             #sliding parameters
-            t_sliding_footage=slide_on_uid.aggregate(Sum("drilled_ft")).get('drilled_ft__sum') if slide_on_uid.aggregate(Sum("drilled_ft")).get('drilled_ft__sum') and slide_on_uid.aggregate(Sum("drilled_ft")).get('drilled_ft__sum')> 0 else 0
+            sliding_aggregate = slide_on_uid.aggregate(Sum("drilled_ft"), Avg("rop_a"), Avg("edr_raw__wob"), Avg("edr_raw__td_rpm"), Avg("bit_rpm"), Avg("edr_raw__flow_in"), 
+                                                        Avg("edr_raw__diff_press"), Avg("edr_raw__pump_press"), Avg("edr_raw__td_torque"))
+            t_sliding_footage=sliding_aggregate.get('drilled_ft__sum') if sliding_aggregate.get('drilled_ft__sum') and sliding_aggregate.get('drilled_ft__sum')> 0 else 0
             t_slide_pct_d=t_sliding_footage/(t_hole_depth_end-t_hole_depth_start)*100
             t_slide_pct_t=len(slide_on_uid)*obj.data_frequency/ 3600 /t_drill_hours
-            t_rop_avg_sliding=slide_on_uid.aggregate(Avg("rop_a")).get('rop_a__avg')
-            t_wob_avg_sliding=slide_on_uid.aggregate(Avg("edr_raw__wob")).get('edr_raw__wob__avg')
-            t_top_drive_rpm_avg_sliding=slide_on_uid.aggregate(Avg("edr_raw__td_rpm")).get('edr_raw__td_rpm__avg')
-            t_bit_rpm_avg_sliding=slide_on_uid.aggregate(Avg("bit_rpm")).get('bit_rpm__avg')
-            t_flow_rate_avg_sliding=slide_on_uid.aggregate(Avg("edr_raw__flow_in")).get('edr_raw__flow_in__avg')
-            t_diff_pressure_avg_sliding=slide_on_uid.aggregate(Avg("edr_raw__diff_press")).get('edr_raw__diff_press__avg')
-            t_pump_pressure_avg_sliding=slide_on_uid.aggregate(Avg("edr_raw__pump_press")).get('edr_raw__pump_press__avg')
-            t_top_drive_torque_avg_sliding=slide_on_uid.aggregate(Avg("edr_raw__td_torque")).get('edr_raw__td_torque__avg')
+            t_rop_avg_sliding=sliding_aggregate.get('rop_a__avg')
+            t_wob_avg_sliding=sliding_aggregate.get('edr_raw__wob__avg')
+            t_top_drive_rpm_avg_sliding=sliding_aggregate.get('edr_raw__td_rpm__avg')
+            t_bit_rpm_avg_sliding=sliding_aggregate.get('bit_rpm__avg')
+            t_flow_rate_avg_sliding=sliding_aggregate.get('edr_raw__flow_in__avg')
+            t_diff_pressure_avg_sliding=sliding_aggregate.get('edr_raw__diff_press__avg')
+            t_pump_pressure_avg_sliding=sliding_aggregate.get('edr_raw__pump_press__avg')
+            t_top_drive_torque_avg_sliding=sliding_aggregate.get('edr_raw__td_torque__avg')
 
             #rotating parameters
+            rotating_aggregate = rotate_on_uid.aggregate(Avg("rop_a"), Avg("edr_raw__wob"), Avg("edr_raw__td_rpm"), Avg("bit_rpm"), Avg("edr_raw__flow_in"), 
+                                                        Avg("edr_raw__diff_press"), Avg("edr_raw__pump_press"), Avg("edr_raw__td_torque"))
             t_rotating_footage=t_hole_depth_end-t_hole_depth_start-t_sliding_footage
             t_rotate_pct_d=100-t_slide_pct_d
             t_rotate_pct_t=100-t_slide_pct_t
-            t_rop_avg_rotating=rotate_on_uid.aggregate(Avg("rop_a")).get('rop_a__avg')
-            t_wob_avg_rotating=rotate_on_uid.aggregate(Avg("edr_raw__wob")).get('edr_raw__wob__avg')
-            t_top_drive_rpm_avg_rotating=rotate_on_uid.aggregate(Avg("edr_raw__td_rpm")).get('edr_raw__td_rpm__avg')
-            t_bit_rpm_avg_rotating=rotate_on_uid.aggregate(Avg("bit_rpm")).get('bit_rpm__avg')
-            t_flow_rate_avg_rotating=rotate_on_uid.aggregate(Avg("edr_raw__flow_in")).get('edr_raw__flow_in__avg')
-            t_diff_pressure_avg_rotating=rotate_on_uid.aggregate(Avg("edr_raw__diff_press")).get('edr_raw__diff_press__avg')
-            t_pump_pressure_avg_rotating=rotate_on_uid.aggregate(Avg("edr_raw__pump_press")).get('edr_raw__pump_press__avg')
-            t_top_drive_torque_avg_rotating=rotate_on_uid.aggregate(Avg("edr_raw__td_torque")).get('edr_raw__td_torque__avg')
+            t_rop_avg_rotating=rotating_aggregate.get('rop_a__avg')
+            t_wob_avg_rotating=rotating_aggregate.get('edr_raw__wob__avg')
+            t_top_drive_rpm_avg_rotating=rotating_aggregate.get('edr_raw__td_rpm__avg')
+            t_bit_rpm_avg_rotating=rotating_aggregate.get('bit_rpm__avg')
+            t_flow_rate_avg_rotating=rotating_aggregate.get('edr_raw__flow_in__avg')
+            t_diff_pressure_avg_rotating=rotating_aggregate.get('edr_raw__diff_press__avg')
+            t_pump_pressure_avg_rotating=rotating_aggregate.get('edr_raw__pump_press__avg')
+            t_top_drive_torque_avg_rotating=rotating_aggregate.get('edr_raw__td_torque__avg')
 
         tangent = {
             "interval_name": t_interval_name,
@@ -773,37 +807,43 @@ class WellOverviewSerializer(serializers.ModelSerializer):
             slide_on_uid = EDRDrilled.objects.filter(uid=obj.uid,edr_raw__hole_depth__gte=I2_hole_depth_start, edr_raw__hole_depth__lte=I2_hole_depth_end,slide_count__gt=0)
             rotate_on_uid = EDRDrilled.objects.filter(uid=obj.uid,edr_raw__hole_depth__gte=I2_hole_depth_start, edr_raw__hole_depth__lte=I2_hole_depth_end,slide_count=0)
 
-            I2_dt_start=drilled_on_uid.aggregate(Min("edr_raw__rig_time")).get('edr_raw__rig_time__min')
-            I2_dt_end =drilled_on_uid.aggregate(Max("edr_raw__rig_time")).get('edr_raw__rig_time__max')
+            drilled_aggregate = drilled_on_uid.aggregate(Min("edr_raw__rig_time"), Max("edr_raw__rig_time"), Avg("rop_a"))
+
+            I2_dt_start=drilled_aggregate.get('edr_raw__rig_time__min')
+            I2_dt_end =drilled_aggregate.get('edr_raw__rig_time__max')
             I2_total_hours =(I2_dt_end-I2_dt_start).total_seconds() / 3600
             I2_drill_hours =len(drilled_on_uid)*obj.data_frequency/ 3600
-            I2_rop_avg =drilled_on_uid.aggregate(Avg("rop_a")).get('rop_a__avg')
+            I2_rop_avg =drilled_aggregate.get('rop_a__avg')
       
             #sliding parameters
-            I2_sliding_footage=slide_on_uid.aggregate(Sum("drilled_ft")).get('drilled_ft__sum') if slide_on_uid.aggregate(Sum("drilled_ft")).get('drilled_ft__sum') and slide_on_uid.aggregate(Sum("drilled_ft")).get('drilled_ft__sum')> 0 else 0
+            sliding_aggregate = slide_on_uid.aggregate(Sum("drilled_ft"), Avg("rop_a"), Avg("edr_raw__wob"), Avg("edr_raw__td_rpm"), Avg("bit_rpm"), Avg("edr_raw__flow_in"), 
+                                                        Avg("edr_raw__diff_press"), Avg("edr_raw__pump_press"), Avg("edr_raw__td_torque"))
+            I2_sliding_footage=sliding_aggregate.get('drilled_ft__sum') if sliding_aggregate.get('drilled_ft__sum') and sliding_aggregate.get('drilled_ft__sum')> 0 else 0
             I2_slide_pct_d=I2_sliding_footage/(I2_hole_depth_end-I2_hole_depth_start)*100
             I2_slide_pct_t=len(slide_on_uid)*obj.data_frequency/ 3600 /I2_drill_hours
-            I2_rop_avg_sliding=slide_on_uid.aggregate(Avg("rop_a")).get('rop_a__avg')
-            I2_wob_avg_sliding=slide_on_uid.aggregate(Avg("edr_raw__wob")).get('edr_raw__wob__avg')
-            I2_top_drive_rpm_avg_sliding=slide_on_uid.aggregate(Avg("edr_raw__td_rpm")).get('edr_raw__td_rpm__avg')
-            I2_bit_rpm_avg_sliding=slide_on_uid.aggregate(Avg("bit_rpm")).get('bit_rpm__avg')
-            I2_flow_rate_avg_sliding=slide_on_uid.aggregate(Avg("edr_raw__flow_in")).get('edr_raw__flow_in__avg')
-            I2_diff_pressure_avg_sliding=slide_on_uid.aggregate(Avg("edr_raw__diff_press")).get('edr_raw__diff_press__avg')
-            I2_pump_pressure_avg_sliding=slide_on_uid.aggregate(Avg("edr_raw__pump_press")).get('edr_raw__pump_press__avg')
-            I2_top_drive_torque_avg_sliding=slide_on_uid.aggregate(Avg("edr_raw__td_torque")).get('edr_raw__td_torque__avg')
+            I2_rop_avg_sliding=sliding_aggregate.get('rop_a__avg')
+            I2_wob_avg_sliding=sliding_aggregate.get('edr_raw__wob__avg')
+            I2_top_drive_rpm_avg_sliding=sliding_aggregate.get('edr_raw__td_rpm__avg')
+            I2_bit_rpm_avg_sliding=sliding_aggregate.get('bit_rpm__avg')
+            I2_flow_rate_avg_sliding=sliding_aggregate.get('edr_raw__flow_in__avg')
+            I2_diff_pressure_avg_sliding=sliding_aggregate.get('edr_raw__diff_press__avg')
+            I2_pump_pressure_avg_sliding=sliding_aggregate.get('edr_raw__pump_press__avg')
+            I2_top_drive_torque_avg_sliding=sliding_aggregate.get('edr_raw__td_torque__avg')
 
             #rotating parameters
+            rotating_aggregate = rotate_on_uid.aggregate(Avg("rop_a"), Avg("edr_raw__wob"), Avg("edr_raw__td_rpm"), Avg("bit_rpm"), Avg("edr_raw__flow_in"), 
+                                                        Avg("edr_raw__diff_press"), Avg("edr_raw__pump_press"), Avg("edr_raw__td_torque"))
             I2_rotating_footage=I2_hole_depth_end-I2_hole_depth_start-I2_sliding_footage
             I2_rotate_pct_d=100-I2_slide_pct_d
             I2_rotate_pct_t=100-I2_slide_pct_t
-            I2_rop_avg_rotating=rotate_on_uid.aggregate(Avg("rop_a")).get('rop_a__avg')
-            I2_wob_avg_rotating=rotate_on_uid.aggregate(Avg("edr_raw__wob")).get('edr_raw__wob__avg')
-            I2_top_drive_rpm_avg_rotating=rotate_on_uid.aggregate(Avg("edr_raw__td_rpm")).get('edr_raw__td_rpm__avg')
-            I2_bit_rpm_avg_rotating=rotate_on_uid.aggregate(Avg("bit_rpm")).get('bit_rpm__avg')
-            I2_flow_rate_avg_rotating=rotate_on_uid.aggregate(Avg("edr_raw__flow_in")).get('edr_raw__flow_in__avg')
-            I2_diff_pressure_avg_rotating=rotate_on_uid.aggregate(Avg("edr_raw__diff_press")).get('edr_raw__diff_press__avg')
-            I2_pump_pressure_avg_rotating=rotate_on_uid.aggregate(Avg("edr_raw__pump_press")).get('edr_raw__pump_press__avg')
-            I2_top_drive_torque_avg_rotating=rotate_on_uid.aggregate(Avg("edr_raw__td_torque")).get('edr_raw__td_torque__avg')
+            I2_rop_avg_rotating=rotating_aggregate.get('rop_a__avg')
+            I2_wob_avg_rotating=rotating_aggregate.get('edr_raw__wob__avg')
+            I2_top_drive_rpm_avg_rotating=rotating_aggregate.get('edr_raw__td_rpm__avg')
+            I2_bit_rpm_avg_rotating=rotating_aggregate.get('bit_rpm__avg')
+            I2_flow_rate_avg_rotating=rotating_aggregate.get('edr_raw__flow_in__avg')
+            I2_diff_pressure_avg_rotating=rotating_aggregate.get('edr_raw__diff_press__avg')
+            I2_pump_pressure_avg_rotating=rotating_aggregate.get('edr_raw__pump_press__avg')
+            I2_top_drive_torque_avg_rotating=rotating_aggregate.get('edr_raw__td_torque__avg')
 
         intermediate2 = {
             "interval_name": I2_interval_name,
@@ -880,37 +920,43 @@ class WellOverviewSerializer(serializers.ModelSerializer):
             slide_on_uid = EDRDrilled.objects.filter(uid=obj.uid,edr_raw__hole_depth__gte=I3_hole_depth_start, edr_raw__hole_depth__lte=I3_hole_depth_end,slide_count__gt=0)
             rotate_on_uid = EDRDrilled.objects.filter(uid=obj.uid,edr_raw__hole_depth__gte=I3_hole_depth_start, edr_raw__hole_depth__lte=I3_hole_depth_end,slide_count=0)
 
-            I3_dt_start=drilled_on_uid.aggregate(Min("edr_raw__rig_time")).get('edr_raw__rig_time__min')
-            I3_dt_end =drilled_on_uid.aggregate(Max("edr_raw__rig_time")).get('edr_raw__rig_time__max')
+            drilled_aggregate = drilled_on_uid.aggregate(Min("edr_raw__rig_time"), Max("edr_raw__rig_time"), Avg("rop_a"))
+
+            I3_dt_start=drilled_aggregate.get('edr_raw__rig_time__min')
+            I3_dt_end =drilled_aggregate.get('edr_raw__rig_time__max')
             I3_total_hours =(I3_dt_end-I3_dt_start).total_seconds() / 3600
             I3_drill_hours =len(drilled_on_uid)*obj.data_frequency/ 3600
-            I3_rop_avg =drilled_on_uid.aggregate(Avg("rop_a")).get('rop_a__avg')
+            I3_rop_avg =drilled_aggregate.get('rop_a__avg')
       
             #sliding parameters
-            I3_sliding_footage=slide_on_uid.aggregate(Sum("drilled_ft")).get('drilled_ft__sum') if slide_on_uid.aggregate(Sum("drilled_ft")).get('drilled_ft__sum') and slide_on_uid.aggregate(Sum("drilled_ft")).get('drilled_ft__sum')> 0 else 0
+            sliding_aggregate = slide_on_uid.aggregate(Sum("drilled_ft"), Avg("rop_a"), Avg("edr_raw__wob"), Avg("edr_raw__td_rpm"), Avg("bit_rpm"), Avg("edr_raw__flow_in"), 
+                                                        Avg("edr_raw__diff_press"), Avg("edr_raw__pump_press"), Avg("edr_raw__td_torque"))
+            I3_sliding_footage=sliding_aggregate.get('drilled_ft__sum') if sliding_aggregate.get('drilled_ft__sum') and sliding_aggregate.get('drilled_ft__sum')> 0 else 0
             I3_slide_pct_d=I3_sliding_footage/(I3_hole_depth_end-I3_hole_depth_start)*100
             I3_slide_pct_t=len(slide_on_uid)*obj.data_frequency/ 3600 /I3_drill_hours
-            I3_rop_avg_sliding=slide_on_uid.aggregate(Avg("rop_a")).get('rop_a__avg')
-            I3_wob_avg_sliding=slide_on_uid.aggregate(Avg("edr_raw__wob")).get('edr_raw__wob__avg')
-            I3_top_drive_rpm_avg_sliding=slide_on_uid.aggregate(Avg("edr_raw__td_rpm")).get('edr_raw__td_rpm__avg')
-            I3_bit_rpm_avg_sliding=slide_on_uid.aggregate(Avg("bit_rpm")).get('bit_rpm__avg')
-            I3_flow_rate_avg_sliding=slide_on_uid.aggregate(Avg("edr_raw__flow_in")).get('edr_raw__flow_in__avg')
-            I3_diff_pressure_avg_sliding=slide_on_uid.aggregate(Avg("edr_raw__diff_press")).get('edr_raw__diff_press__avg')
-            I3_pump_pressure_avg_sliding=slide_on_uid.aggregate(Avg("edr_raw__pump_press")).get('edr_raw__pump_press__avg')
-            I3_top_drive_torque_avg_sliding=slide_on_uid.aggregate(Avg("edr_raw__td_torque")).get('edr_raw__td_torque__avg')
+            I3_rop_avg_sliding=sliding_aggregate.get('rop_a__avg')
+            I3_wob_avg_sliding=sliding_aggregate.get('edr_raw__wob__avg')
+            I3_top_drive_rpm_avg_sliding=sliding_aggregate.get('edr_raw__td_rpm__avg')
+            I3_bit_rpm_avg_sliding=sliding_aggregate.get('bit_rpm__avg')
+            I3_flow_rate_avg_sliding=sliding_aggregate.get('edr_raw__flow_in__avg')
+            I3_diff_pressure_avg_sliding=sliding_aggregate.get('edr_raw__diff_press__avg')
+            I3_pump_pressure_avg_sliding=sliding_aggregate.get('edr_raw__pump_press__avg')
+            I3_top_drive_torque_avg_sliding=sliding_aggregate.get('edr_raw__td_torque__avg')
 
             #rotating parameters
+            rotating_aggregate = rotate_on_uid.aggregate(Avg("rop_a"), Avg("edr_raw__wob"), Avg("edr_raw__td_rpm"), Avg("bit_rpm"), Avg("edr_raw__flow_in"), 
+                                                        Avg("edr_raw__diff_press"), Avg("edr_raw__pump_press"), Avg("edr_raw__td_torque"))
             I3_rotating_footage=I3_hole_depth_end-I3_hole_depth_start-I3_sliding_footage
             I3_rotate_pct_d=100-I3_slide_pct_d
             I3_rotate_pct_t=100-I3_slide_pct_t
-            I3_rop_avg_rotating=rotate_on_uid.aggregate(Avg("rop_a")).get('rop_a__avg')
-            I3_wob_avg_rotating=rotate_on_uid.aggregate(Avg("edr_raw__wob")).get('edr_raw__wob__avg')
-            I3_top_drive_rpm_avg_rotating=rotate_on_uid.aggregate(Avg("edr_raw__td_rpm")).get('edr_raw__td_rpm__avg')
-            I3_bit_rpm_avg_rotating=rotate_on_uid.aggregate(Avg("bit_rpm")).get('bit_rpm__avg')
-            I3_flow_rate_avg_rotating=rotate_on_uid.aggregate(Avg("edr_raw__flow_in")).get('edr_raw__flow_in__avg')
-            I3_diff_pressure_avg_rotating=rotate_on_uid.aggregate(Avg("edr_raw__diff_press")).get('edr_raw__diff_press__avg')
-            I3_pump_pressure_avg_rotating=rotate_on_uid.aggregate(Avg("edr_raw__pump_press")).get('edr_raw__pump_press__avg')
-            I3_top_drive_torque_avg_rotating=rotate_on_uid.aggregate(Avg("edr_raw__td_torque")).get('edr_raw__td_torque__avg')
+            I3_rop_avg_rotating=rotating_aggregate.get('rop_a__avg')
+            I3_wob_avg_rotating=rotating_aggregate.get('edr_raw__wob__avg')
+            I3_top_drive_rpm_avg_rotating=rotating_aggregate.get('edr_raw__td_rpm__avg')
+            I3_bit_rpm_avg_rotating=rotating_aggregate.get('bit_rpm__avg')
+            I3_flow_rate_avg_rotating=rotating_aggregate.get('edr_raw__flow_in__avg')
+            I3_diff_pressure_avg_rotating=rotating_aggregate.get('edr_raw__diff_press__avg')
+            I3_pump_pressure_avg_rotating=rotating_aggregate.get('edr_raw__pump_press__avg')
+            I3_top_drive_torque_avg_rotating=rotating_aggregate.get('edr_raw__td_torque__avg')
 
         intermediate3 = {
             "interval_name": I3_interval_name,
@@ -987,37 +1033,43 @@ class WellOverviewSerializer(serializers.ModelSerializer):
             slide_on_uid = EDRDrilled.objects.filter(uid=obj.uid,edr_raw__hole_depth__gte=I4_hole_depth_start, edr_raw__hole_depth__lte=I4_hole_depth_end,slide_count__gt=0)
             rotate_on_uid = EDRDrilled.objects.filter(uid=obj.uid,edr_raw__hole_depth__gte=I4_hole_depth_start, edr_raw__hole_depth__lte=I4_hole_depth_end,slide_count=0)
 
-            I4_dt_start=drilled_on_uid.aggregate(Min("edr_raw__rig_time")).get('edr_raw__rig_time__min')
-            I4_dt_end =drilled_on_uid.aggregate(Max("edr_raw__rig_time")).get('edr_raw__rig_time__max')
+            drilled_aggregate = drilled_on_uid.aggregate(Min("edr_raw__rig_time"), Max("edr_raw__rig_time"), Avg("rop_a"))
+
+            I4_dt_start=drilled_aggregate.get('edr_raw__rig_time__min')
+            I4_dt_end =drilled_aggregate.get('edr_raw__rig_time__max')
             I4_total_hours =(I4_dt_end-I4_dt_start).total_seconds() / 3600
             I4_drill_hours =len(drilled_on_uid)*obj.data_frequency/ 3600
-            I4_rop_avg =drilled_on_uid.aggregate(Avg("rop_a")).get('rop_a__avg')
+            I4_rop_avg =drilled_aggregate.get('rop_a__avg')
       
             #sliding parameters
-            I4_sliding_footage=slide_on_uid.aggregate(Sum("drilled_ft")).get('drilled_ft__sum') if slide_on_uid.aggregate(Sum("drilled_ft")).get('drilled_ft__sum') and slide_on_uid.aggregate(Sum("drilled_ft")).get('drilled_ft__sum')> 0 else 0
+            sliding_aggregate = slide_on_uid.aggregate(Sum("drilled_ft"), Avg("rop_a"), Avg("edr_raw__wob"), Avg("edr_raw__td_rpm"), Avg("bit_rpm"), Avg("edr_raw__flow_in"), 
+                                                        Avg("edr_raw__diff_press"), Avg("edr_raw__pump_press"), Avg("edr_raw__td_torque"))
+            I4_sliding_footage=sliding_aggregate.get('drilled_ft__sum') if sliding_aggregate.get('drilled_ft__sum') and sliding_aggregate.get('drilled_ft__sum')> 0 else 0
             I4_slide_pct_d=I4_sliding_footage/(I4_hole_depth_end-I4_hole_depth_start)*100
             I4_slide_pct_t=len(slide_on_uid)*obj.data_frequency/ 3600 /I4_drill_hours
-            I4_rop_avg_sliding=slide_on_uid.aggregate(Avg("rop_a")).get('rop_a__avg')
-            I4_wob_avg_sliding=slide_on_uid.aggregate(Avg("edr_raw__wob")).get('edr_raw__wob__avg')
-            I4_top_drive_rpm_avg_sliding=slide_on_uid.aggregate(Avg("edr_raw__td_rpm")).get('edr_raw__td_rpm__avg')
-            I4_bit_rpm_avg_sliding=slide_on_uid.aggregate(Avg("bit_rpm")).get('bit_rpm__avg')
-            I4_flow_rate_avg_sliding=slide_on_uid.aggregate(Avg("edr_raw__flow_in")).get('edr_raw__flow_in__avg')
-            I4_diff_pressure_avg_sliding=slide_on_uid.aggregate(Avg("edr_raw__diff_press")).get('edr_raw__diff_press__avg')
-            I4_pump_pressure_avg_sliding=slide_on_uid.aggregate(Avg("edr_raw__pump_press")).get('edr_raw__pump_press__avg')
-            I4_top_drive_torque_avg_sliding=slide_on_uid.aggregate(Avg("edr_raw__td_torque")).get('edr_raw__td_torque__avg')
+            I4_rop_avg_sliding=sliding_aggregate.get('rop_a__avg')
+            I4_wob_avg_sliding=sliding_aggregate.get('edr_raw__wob__avg')
+            I4_top_drive_rpm_avg_sliding=sliding_aggregate.get('edr_raw__td_rpm__avg')
+            I4_bit_rpm_avg_sliding=sliding_aggregate.get('bit_rpm__avg')
+            I4_flow_rate_avg_sliding=sliding_aggregate.get('edr_raw__flow_in__avg')
+            I4_diff_pressure_avg_sliding=sliding_aggregate.get('edr_raw__diff_press__avg')
+            I4_pump_pressure_avg_sliding=sliding_aggregate.get('edr_raw__pump_press__avg')
+            I4_top_drive_torque_avg_sliding=sliding_aggregate.get('edr_raw__td_torque__avg')
 
             #rotating parameters
+            rotating_aggregate = rotate_on_uid.aggregate(Avg("rop_a"), Avg("edr_raw__wob"), Avg("edr_raw__td_rpm"), Avg("bit_rpm"), Avg("edr_raw__flow_in"), 
+                                                        Avg("edr_raw__diff_press"), Avg("edr_raw__pump_press"), Avg("edr_raw__td_torque"))
             I4_rotating_footage=I4_hole_depth_end-I4_hole_depth_start-I4_sliding_footage
             I4_rotate_pct_d=100-I4_slide_pct_d
             I4_rotate_pct_t=100-I4_slide_pct_t
-            I4_rop_avg_rotating=rotate_on_uid.aggregate(Avg("rop_a")).get('rop_a__avg')
-            I4_wob_avg_rotating=rotate_on_uid.aggregate(Avg("edr_raw__wob")).get('edr_raw__wob__avg')
-            I4_top_drive_rpm_avg_rotating=rotate_on_uid.aggregate(Avg("edr_raw__td_rpm")).get('edr_raw__td_rpm__avg')
-            I4_bit_rpm_avg_rotating=rotate_on_uid.aggregate(Avg("bit_rpm")).get('bit_rpm__avg')
-            I4_flow_rate_avg_rotating=rotate_on_uid.aggregate(Avg("edr_raw__flow_in")).get('edr_raw__flow_in__avg')
-            I4_diff_pressure_avg_rotating=rotate_on_uid.aggregate(Avg("edr_raw__diff_press")).get('edr_raw__diff_press__avg')
-            I4_pump_pressure_avg_rotating=rotate_on_uid.aggregate(Avg("edr_raw__pump_press")).get('edr_raw__pump_press__avg')
-            I4_top_drive_torque_avg_rotating=rotate_on_uid.aggregate(Avg("edr_raw__td_torque")).get('edr_raw__td_torque__avg')
+            I4_rop_avg_rotating=rotating_aggregate.get('rop_a__avg')
+            I4_wob_avg_rotating=rotating_aggregate.get('edr_raw__wob__avg')
+            I4_top_drive_rpm_avg_rotating=rotating_aggregate.get('edr_raw__td_rpm__avg')
+            I4_bit_rpm_avg_rotating=rotating_aggregate.get('bit_rpm__avg')
+            I4_flow_rate_avg_rotating=rotating_aggregate.get('edr_raw__flow_in__avg')
+            I4_diff_pressure_avg_rotating=rotating_aggregate.get('edr_raw__diff_press__avg')
+            I4_pump_pressure_avg_rotating=rotating_aggregate.get('edr_raw__pump_press__avg')
+            I4_top_drive_torque_avg_rotating=rotating_aggregate.get('edr_raw__td_torque__avg')
 
         intermediate4 = {
             "interval_name": I4_interval_name,
