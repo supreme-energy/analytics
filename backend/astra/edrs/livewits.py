@@ -30,15 +30,6 @@ from django.utils.dateparse import parse_datetime
 def edrdata(uidWell, uidWellbore, date, data_frequency, url, username, password):
     headers = {'content-type': 'text/xml; charset=utf-8',
                'Content-Length': '8'}
-    print("uidWell = ", uidWell)
-    print("uidWellbore = ", uidWellbore)
-    print("date = ", date)
-    print("date type = ", type(date))
-    print("data_frequency = ", data_frequency)
-    print("url = ", url)
-    print("username = ", username)
-    print("password = ", password)
-    print("Updated date = ", parse_datetime("1970-05-26T05:25:18-05:00"))
 
     rig_body = """
       <soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/" xmlns:soapenc="http://schemas.xmlsoap.org/soap/encoding/" xmlns:tns="http://www.witsml.org/wsdl/120" xmlns:types="http://www.witsml.org/wsdl/120/encodedTypes" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
