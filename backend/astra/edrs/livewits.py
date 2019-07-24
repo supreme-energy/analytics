@@ -26,25 +26,19 @@ import suds
 import psutil
 from django.utils.dateparse import parse_datetime
 
-# calculate runtime
-start_time = time.time()
 
-data_frequency = 10
-
-username = 'sses_us'
-password = 'PolarisTexas'
-url = 'http://witsml.polarisguidance.com:8081/services/polarisWMLS'
-uidWell ='ae7ad273-cba4-44ce-a936-20fca8d354a6'
-uidWellbore="ed636b32-2ff9-4546-acd0-481ac83d6256"
-date = parse_datetime("1970-05-26T05:25:18-05:00")
-
-def edrdata(uidWell,uidWellbore, date, data_frequency,url,username,password):
+def edrdata(uidWell, uidWellbore, date, data_frequency, url, username, password):
     headers = {'content-type': 'text/xml; charset=utf-8',
                'Content-Length': '8'}
-    # print("uidWell = ", uidWell)
-    # print("uidWellbore = ", uidWellbore)
-    # print("well_name = ", well_name)
-    # print("rig_name = ", rig_name)
+    print("uidWell = ", uidWell)
+    print("uidWellbore = ", uidWellbore)
+    print("date = ", date)
+    print("date type = ", type(date))
+    print("data_frequency = ", data_frequency)
+    print("url = ", url)
+    print("username = ", username)
+    print("password = ", password)
+    print("Updated date = ", parse_datetime("1970-05-26T05:25:18-05:00"))
 
     rig_body = """
       <soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/" xmlns:soapenc="http://schemas.xmlsoap.org/soap/encoding/" xmlns:tns="http://www.witsml.org/wsdl/120" xmlns:types="http://www.witsml.org/wsdl/120/encodedTypes" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
@@ -121,7 +115,7 @@ def edrdata(uidWell,uidWellbore, date, data_frequency,url,username,password):
         </q1:WMLS_GetFromStore>
       </soap:Body>
     </soap:Envelope>
-    """ % (uidWell,uidWellbore, date)
+    """ % (uidWell, uidWellbore, date)
 
     response = requests.post(
         url, data=rig_body, headers=headers, auth=(username, password))
@@ -129,20 +123,19 @@ def edrdata(uidWell,uidWellbore, date, data_frequency,url,username,password):
     root = ET.fromstring(response.text)
 
     xml_content = ET.fromstring(root.find(".//XMLout").text)
-    
+
     mnemonic = xml_content.findall(
         ".//{http://www.witsml.org/schemas/131}mnemonic")
     data = xml_content.findall(".//{http://www.witsml.org/schemas/131}data")
     log_curve_info = xml_content.findall(
         ".//{http://www.witsml.org/schemas/131}logCurveInfo")
-    
+
     header_names = []
 
     for i in range(len(mnemonic)):
         header_names += [mnemonic[i].text]
 
     witsheader = pd.DataFrame([])
-
 
     for i in range(len(data)):
         x = re.split(r',', data[i].text)
@@ -151,20 +144,16 @@ def edrdata(uidWell,uidWellbore, date, data_frequency,url,username,password):
         witsheader = witsheader.append(df)
 
     witsheader.columns = header_names
-
-
+    # print("--------------- witsheader ---------------")
     # print(witsheader)
     ''' this is the order of columns animo wants to map into to allow for merge into edr_raw table'''
-    animo_headers = ['rig_time', 'rop_a','hole_size', 'edr_mse', 'bit_depth', 'block_height', 'diff_press',
-                     'rop_i', 'pump_press', 'flow_in', 'flow_out', 'gamma_ray', 'overpull', 'svy_azi', 'tf_grav', 
-                     'svy_inc', 'tf_mag', 'hookload', 'td_rpm', 'td_torque', 'mud_ti', 'mud_to', 'hole_depth', 
+    animo_headers = ['rig_time', 'rop_a', 'hole_size', 'edr_mse', 'bit_depth', 'block_height', 'diff_press',
+                     'rop_i', 'pump_press', 'flow_in', 'flow_out', 'gamma_ray', 'overpull', 'svy_azi', 'tf_grav',
+                     'svy_inc', 'tf_mag', 'hookload', 'td_rpm', 'td_torque', 'mud_ti', 'mud_to', 'hole_depth',
                      'total_spm', 'strokes_total', 'tvd', 'wob', 'oscillator']
-        
+
     ''' SSES Headers'''
-    edrraw = witsheader[['DateTime', 'ROP','HOLEDIAMETER', 'MECHANICALSPECIFICENERGY','BITDEPTH','BLOCKHEIGHT','DIFFERENTIALPRESSURE', 
-                          'EDRINSTANTANEOUSROP','SPP', 'GPM','FLOWOUT','GAMA',  'OVERPULL', 'AZM', 'GTF',
-                          'INC','MTF','HOOKLOAD','RPM','TRQ', 'TEMPERATURE',  'TEMP',  'DEP',
-                          'PUMPTOTALSTROKESRATE','TOTALSTROKESALLPUMPS', 'TVD','WOB',  'SLIDEINDICATOR']]
+    edrraw = witsheader[['DateTime', 'ROP', 'HOLEDIAMETER', 'MECHANICALSPECIFICENERGY', 'BITDEPTH', 'BLOCKHEIGHT', 'DIFFERENTIALPRESSURE', 'EDRINSTANTANEOUSROP', 'SPP', 'GPM', 'FLOWOUT', 'GAMA', 'OVERPULL', 'AZM', 'GTF', 'INC', 'MTF', 'HOOKLOAD', 'RPM', 'TRQ', 'TEMPERATURE', 'TEMP', 'DEP', 'PUMPTOTALSTROKESRATE', 'TOTALSTROKESALLPUMPS', 'TVD', 'WOB', 'SLIDEINDICATOR']]
 
     ''' TOTCO Headers   
     edrraw = witsheader[['RIGTIME', 'AVG_ROP_FT_HR', 'Basic MSE', 'BIT_DEPTH', 'BLOCK_POS','DIFF_PRESS', 'FAST_ROP_FT_HR', 
@@ -174,117 +163,8 @@ def edrdata(uidWell,uidWellbore, date, data_frequency,url,username,password):
 
     '''
     edrraw.columns = animo_headers
+    # print(edrraw)
     return (edrraw)
-
-
-def timeremarks(rig_id):
-    url, headers, username, password, uidWell, uidWellbore, well_name, rig_name = connect(
-        rig_id)
-
-    remarks_body = """
-    <soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/" xmlns:soapenc="http://schemas.xmlsoap.org/soap/encoding/" xmlns:tns="http://www.witsml.org/wsdl/120" xmlns:types="http://www.witsml.org/wsdl/120/encodedTypes" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
-      <soap:Body soap:encodingStyle="http://schemas.xmlsoap.org/soap/encoding/">
-        <q1:WMLS_GetFromStore xmlns:q1="http://www.witsml.org/message/120">
-          <WMLtypeIn xsi:type="xsd:string">log</WMLtypeIn>
-          <QueryIn xsi:type="xsd:string">&lt;logs xmlns="http://www.witsml.org/schemas/131" version="1.3.1.1"&gt;
-      &lt;log uidWell="%s" uidWellbore="%s" uid="Time_Remarks"&gt;
-        &lt;nameWell /&gt;
-        &lt;nameWellbore /&gt;
-        &lt;name /&gt;
-        &lt;objectGrowing /&gt;
-        &lt;dataRowCount /&gt;
-        &lt;serviceCompany /&gt;
-        &lt;runNumber /&gt;
-        &lt;bhaRunNumber /&gt;
-        &lt;pass /&gt;
-        &lt;creationDate /&gt;
-        &lt;description /&gt;
-        &lt;indexType /&gt;
-        &lt;startIndex uom="" /&gt;
-        &lt;endIndex uom="" /&gt;
-        &lt;stepIncrement uom="" numerator="" denominator="" /&gt;
-        &lt;startDateTimeIndex /&gt;
-        &lt;endDateTimeIndex /&gt;
-        &lt;direction /&gt;
-        &lt;indexCurve columnIndex="" /&gt;
-        &lt;nullValue /&gt;
-        &lt;logParam index="" name="" uom="" description="" /&gt;
-        &lt;logCurveInfo uid=""&gt;
-          &lt;mnemonic /&gt;
-          &lt;classWitsml /&gt;
-          &lt;unit /&gt;
-          &lt;mnemAlias /&gt;
-          &lt;nullValue /&gt;
-          &lt;alternateIndex /&gt;
-          &lt;wellDatum uidRef="" /&gt;
-          &lt;minIndex uom="" /&gt;
-          &lt;maxIndex uom="" /&gt;
-          &lt;minDateTimeIndex /&gt;
-          &lt;maxDateTimeIndex /&gt;
-          &lt;columnIndex /&gt;
-          &lt;curveDescription /&gt;
-          &lt;sensorOffset uom="" /&gt;
-          &lt;dataSource /&gt;
-          &lt;densData uom="" /&gt;
-          &lt;traceState /&gt;
-          &lt;traceOrigin /&gt;
-          &lt;typeLogData /&gt;
-          &lt;axisDefinition uid=""&gt;
-            &lt;order /&gt;
-            &lt;count /&gt;
-            &lt;name /&gt;
-            &lt;propertyType /&gt;
-            &lt;uom /&gt;
-            &lt;doubleValues /&gt;
-            &lt;stringValues /&gt;
-          &lt;/axisDefinition&gt;
-        &lt;/logCurveInfo&gt;
-        &lt;logData&gt;
-          &lt;data /&gt;
-        &lt;/logData&gt;
-        &lt;commonData&gt;
-          &lt;sourceName /&gt;
-          &lt;dTimCreation /&gt;
-          &lt;dTimLastChange /&gt;
-          &lt;itemState /&gt;
-          &lt;comments /&gt;
-        &lt;/commonData&gt;
-        &lt;customData /&gt;
-      &lt;/log&gt;
-    &lt;/logs&gt;</QueryIn>
-          <OptionsIn xsi:type="xsd:string">returnElements=requested</OptionsIn>
-        </q1:WMLS_GetFromStore>
-      </soap:Body>
-    </soap:Envelope>
-    """ % (uidWell, uidWellbore)
-
-    response = requests.post(
-        url, data=remarks_body, headers=headers, auth=(username, password))
-
-    root = ET.fromstring(response.text)
-
-    xml_content = ET.fromstring(root.find(".//XMLout").text)
-
-    mnemonic = xml_content.findall(
-        ".//{http://www.witsml.org/schemas/131}mnemonic")
-
-    data = xml_content.findall(".//{http://www.witsml.org/schemas/131}data")
-
-    header_names = ['rig_time', 'comments']
-
-    witsheader = pd.DataFrame([])
-
-    for i in range(len(data)):
-        x = re.split(r',', data[i].text)
-
-        df = pd.DataFrame(x).T
-        witsheader = witsheader.append(df)
-
-    witsheader.columns = header_names
-
-    edrraw = witsheader[['rig_time', 'comments']]
-
-    return (edrraw, uidWell, uidWellbore, well_name, rig_name)
 
 
 def surveys(rig_id):
@@ -444,7 +324,8 @@ def surveys(rig_id):
     xml_content = ET.fromstring(root.find(".//XMLout").text)
 
     md = xml_content.findall(".//{http://www.witsml.org/schemas/131}md")
-    dTimStn = xml_content.findall(".//{http://www.witsml.org/schemas/131}dTimStn")
+    dTimStn = xml_content.findall(
+        ".//{http://www.witsml.org/schemas/131}dTimStn")
     tvd = xml_content.findall(".//{http://www.witsml.org/schemas/131}tvd")
     incl = xml_content.findall(".//{http://www.witsml.org/schemas/131}incl")
     azi = xml_content.findall(".//{http://www.witsml.org/schemas/131}azi")
@@ -486,5 +367,3 @@ def surveys(rig_id):
 
     return (witsheader, uidWell, uidWellbore, well_name, rig_name)
 
-
-edrdata(uidWell, uidWellbore,date, data_frequency,url,username,password)
