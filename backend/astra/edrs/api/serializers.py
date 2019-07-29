@@ -60,11 +60,24 @@ class EDRDrilledSerializer(serializers.ModelSerializer):
         read_only_field = ('id',)
 
 class EDRDrilledParameterSerializer(serializers.ModelSerializer):
+    rig_time = serializers.SerializerMethodField(read_only=True, required=False)
+    hole_depth = serializers.SerializerMethodField(read_only=True, required=False)
     diff_pressure = serializers.SerializerMethodField(read_only=True, required=False)
     td_torque = serializers.SerializerMethodField(read_only=True, required=False)
     td_rpm = serializers.SerializerMethodField(read_only=True, required=False)
     connection_number = serializers.SerializerMethodField(read_only=True, required=False)
 
+    def get_rig_time(self, obj):
+        try: 
+            return obj.edr_raw.rig_time
+        except:
+            return ""
+    
+    def get_hole_depth(self, obj):
+        try: 
+            return obj.edr_raw.hole_depth
+        except:
+            return ""
     def get_diff_pressure(self, obj):
         try: 
             return obj.edr_raw.diff_pressure
@@ -93,7 +106,7 @@ class EDRDrilledParameterSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = EDRDrilled
-        fields = ('rop_a', 'bit_rpm', 'astra_mse', 'slide_count', 'diff_pressure', 'td_torque', 'td_rpm', 'connection_number')
+        fields = ('rig_time','hole_depth','rop_a', 'bit_rpm', 'astra_mse', 'slide_count', 'diff_pressure', 'td_torque', 'td_rpm', 'connection_number')
         read_only_field = ('id',)
 
 
