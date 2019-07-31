@@ -29,6 +29,8 @@ class WellConnector(models.Model):
     url = models.CharField(max_length=100, null=True, blank=True)
     username = models.CharField(max_length=50, null=True, blank=True)
     password = models.CharField(max_length=50, null=True, blank=True)
+    chron_on = models.BooleanField(default=False)
+    data_valid = models.BooleanField(default=False)
 
 
 class Interval(models.Model):
