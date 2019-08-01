@@ -1,5 +1,6 @@
 from django.db import models
 from django.utils.translation import ugettext as _
+from handle_cron import make_file, manage_cron
 
 
 class Job(models.Model):
@@ -29,8 +30,31 @@ class WellConnector(models.Model):
     url = models.CharField(max_length=100, null=True, blank=True)
     username = models.CharField(max_length=50, null=True, blank=True)
     password = models.CharField(max_length=50, null=True, blank=True)
-    chron_on = models.BooleanField(default=False)
+    cron_on = models.BooleanField(default=False)
     data_valid = models.BooleanField(default=False)
+
+    def save(self, *args, **kwargs):
+        connector_being_added = False
+
+        if self.pk is None:
+            connector_being_added = True
+
+        # Well connector being added
+        if connector_being_added:
+            make_file(self.uid, self.uid, self.uidWellbore, self.data_frequency,
+                      self.url, self.username, self.password, self.cron_on)
+
+        # Well connector being edited
+        else:
+            manage_cron(self.uid, self.cron_on)
+
+        super(WellConnector, self).save(*args, **kwargs)
+
+    def __str__(self):
+        return self.well_name
+
+    class Meta:
+        verbose_name_plural = "Well Connectors"
 
 
 class Interval(models.Model):
