@@ -33,6 +33,10 @@ class WellConnector(models.Model):
     cron_on = models.BooleanField(default=False)
     data_valid = models.BooleanField(default=False)
 
+    def __init__(self, *args, **kwargs):
+        super(WellConnector, self).__init__(*args, **kwargs)
+        self.__original_cron_on = self.cron_on
+
     def save(self, *args, **kwargs):
         connector_being_added = False
 
@@ -41,11 +45,11 @@ class WellConnector(models.Model):
 
         # Well connector being added
         if connector_being_added:
-            make_file(self.uid, self.uid, self.uidWellbore, self.data_frequency,
+            make_file(self.uid, self.uidWellbore, self.data_frequency,
                       self.url, self.username, self.password, self.cron_on)
 
-        # Well connector being edited
-        else:
+        # Well connector being edited and cron_on changed
+        if connector_being_added is False and self.cron_on != self.__original_cron_on:
             manage_cron(self.uid, self.cron_on)
 
         super(WellConnector, self).save(*args, **kwargs)

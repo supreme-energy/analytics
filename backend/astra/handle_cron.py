@@ -1,14 +1,18 @@
 import os
 import textwrap
+import stat
 from crontab import CronTab
 
 
 def make_file(uidwell, uidwellbore, data_frequency, url, username, password, cron_run):
     filepath = os.getcwd()
 
-    # temp_path = filepath + file_name + ".py"
-    with open(file_name + ".py", 'w') as f:
+    # temp_path = filepath + uidwell + ".py"
+    file_path = "/var/www/html/SSES-Backend/backend/astra/" + uidwell + ".py"
+    with open(file_path, "w+") as f:
         f.write(textwrap.dedent('''\
+            #! /var/www/html/SSES-Backend/backend/env/bin/python3
+            
             from wits_mapper import witsmapper
             from check_process import check_process
 
@@ -24,14 +28,15 @@ def make_file(uidwell, uidwellbore, data_frequency, url, username, password, cro
                 witsmapper(UIDWELL, UIDWELLBORE, DATA_FREQUENCY, URL, USERNAME, PASSWORD)     
                 
                 ''' % (uidwell, uidwellbore, data_frequency, url, username, password, uidwell)))
+    st = os.stat(file_path)
+    os.chmod(file_path, st.st_mode | stat.S_IEXEC)
+
+    manage_cron(uidwell, cron_run)
     print('Execution completed.')
-    manage_cron(file_name, cron_run)
 
 
 def manage_cron(uidwell, cron_run):
-    python_env = "/var/www/html/SSES-Backend/backend/env/bin/python3"
-    file_full_path = python_env + \
-        " /var/www/html/SSES-Backend/backend/" + uidwell + ".py"
+    file_full_path = "/var/www/html/SSES-Backend/backend/astra/" + uidwell + ".py"
 
     my_cron = CronTab(user="www-data")
 
@@ -42,6 +47,8 @@ def manage_cron(uidwell, cron_run):
 
     # Cancel a cron job
     else:
-        my_cron.remove(command=file_full_path)
+        for job in my_cron:
+            if job.command == file_full_path:
+                my_cron.remove(job)
 
     my_cron.write()
