@@ -6,7 +6,8 @@ from edrs.models import (EDRRaw, EDRProcessed,
 from edrs.api.serializers import (EDRRawSerializer, EDRProcessedSerializer,
                                   EDRDrilledSerializer, EDRCXNSerializer, EDRTripSerializer,
                                   EDRCommentSerializer, RTAVerticalSerializer, RTACurveSerializer,
-                                  WellOverviewSerializer, EDRDrilledParameterSerializer)
+                                  WellOverviewSerializer, EDRDrilledParameterSerializer,
+                                  RigStateSerializer)
 from jobs.models import WellConnector
 
 
@@ -142,6 +143,11 @@ class RTACurveViewSet(viewsets.ModelViewSet):
     filter_backends = (DjangoFilterBackend,)
     filter_fields = '__all__'
 
+class RigStateViewSet(viewsets.ModelViewSet):
+    serializer_class = RigStateSerializer
+    queryset = WellConnector.objects.all()
+    filter_backends = (DjangoFilterBackend,)
+    filter_fields = '__all__'
 
 class EDRDrilledViewSet(viewsets.ModelViewSet):
     serializer_class = EDRDrilledSerializer

@@ -22,6 +22,7 @@ urlpatterns = [
     path('api/personnel/', include('personnel.api.urls.personnel')),
     path('api/plans/', include('plans.api.urls.plans')),
     path('api/projections/', include('projections.api.urls')),
+    path('api/rig-states/', include('edrs.api.urls.rig-states')),
     path('api/rta-curves/', include('edrs.api.urls.rta-curves')),
     path('api/rta-verticals/', include('edrs.api.urls.rta-verticals')),
     path('api/surveys/', include('surveys.api.urls.surveys')),
