@@ -9,7 +9,7 @@ def make_file(uidwell, uidwellbore, data_frequency, url, username, password, cro
 
     # temp_path = filepath + uidwell + ".py"
     file_path = "/var/www/html/SSES-Backend/backend/astra/" + uidwell + ".py"
-    with open(file_path, "w+") as f:
+    with open(file_path, "w") as f:
         f.write(textwrap.dedent('''\
             #! /var/www/html/SSES-Backend/backend/env/bin/python3
             
@@ -28,6 +28,7 @@ def make_file(uidwell, uidwellbore, data_frequency, url, username, password, cro
                 witsmapper(UIDWELL, UIDWELLBORE, DATA_FREQUENCY, URL, USERNAME, PASSWORD)     
                 
                 ''' % (uidwell, uidwellbore, data_frequency, url, username, password, uidwell)))
+
     st = os.stat(file_path)
     os.chmod(file_path, st.st_mode | stat.S_IEXEC)
 
@@ -36,6 +37,7 @@ def make_file(uidwell, uidwellbore, data_frequency, url, username, password, cro
 
 
 def manage_cron(uidwell, cron_run):
+    # python_env = "/var/www/html/SSES-Backend/backend/env/bin/python3"
     file_full_path = "/var/www/html/SSES-Backend/backend/astra/" + uidwell + ".py"
 
     my_cron = CronTab(user="www-data")
