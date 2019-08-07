@@ -1218,13 +1218,13 @@ class RigStateSerializer(serializers.ModelSerializer):
         upper_level=[]
         cxn_time = 0
         
-        processed_on_uid = EDRProcessed.objects.filter(uid=obj)
-        circ_on_uid = EDRProcessed.objects.filter(uid=obj,rig_activity2__lte=3,rig_activity2__gte=2,trip_out_number__lte=0,trip_in_number__lte=0)
-        idle_on_uid = EDRProcessed.objects.filter(uid=obj,rig_activity2=7,trip_out_number__lte=0,trip_in_number__lte=0)
-        drilled_on_uid = EDRDrilled.objects.filter(uid=obj)
-        slid_on_uid = EDRDrilled.objects.filter(uid=obj,slide_count__gt=0)
-        cxn_on_uid = EDRCXN.objects.filter(uid=obj)
-
+        processed_on_uid = EDRProcessed.objects.filter(uid=obj.uid)
+        circ_on_uid = EDRProcessed.objects.filter(uid=obj.uid,rig_activity2__lte=3,rig_activity2__gte=2,trip_out_number__lte=0,trip_in_number__lte=0)
+        idle_on_uid = EDRProcessed.objects.filter(uid=obj.uid,rig_activity2=7,trip_out_number__lte=0,trip_in_number__lte=0)
+        drilled_on_uid = EDRDrilled.objects.filter(uid=obj.uid)
+        slid_on_uid = EDRDrilled.objects.filter(uid=obj.uid,slide_count__gt=0)
+        cxn_on_uid = EDRCXN.objects.filter(uid=obj.uid)
+        print(drilled_on_uid)
         total_well_time =round((processed_on_uid.count()*obj.data_frequency/3600),1)
         circ_time =round((circ_on_uid.count()*obj.data_frequency/3600),1)
         idle_time =round((idle_on_uid.count()*obj.data_frequency/3600),1)
@@ -1233,18 +1233,16 @@ class RigStateSerializer(serializers.ModelSerializer):
         rotate_time =drill_time-slide_time
         if cxn_on_uid:
             cxn_time = round((cxn_on_uid.aggregate(Sum('total_time')).get('total_time__sum')/60),1)
-        hours= total_well_time,drill_time,cxn_time,circ_time,idle_time,
-        level="Total Well","Drilling","Connections", "Circulating", "Idle", 
-        upper_level="","Total Well","Total Well","Total Well","Total Well",
+
 
         hours = list(hours)
         level = list(level)
         upper_level = list(upper_level)
 
         #trips = EDRTrip.objects.filter(uid=obj, trip_direction=True, casing=False)
-        trip_in_on_uid = EDRTrip.objects.filter(uid=obj, trip_direction=True, casing=False)
-        trip_out_on_uid = EDRTrip.objects.filter(uid=obj, trip_direction=False, casing=False)
-        casing_on_uid = EDRTrip.objects.filter(uid=obj, trip_direction=True, casing=True)
+        trip_in_on_uid = EDRTrip.objects.filter(uid=obj.uid, trip_direction=True, casing=False)
+        trip_out_on_uid = EDRTrip.objects.filter(uid=obj.uid, trip_direction=False, casing=False)
+        casing_on_uid = EDRTrip.objects.filter(uid=obj.uid, trip_direction=True, casing=True)
         
 
 
@@ -1252,82 +1250,26 @@ class RigStateSerializer(serializers.ModelSerializer):
         trip_in_time = 0
         trip_out_depth = 0
         trip_out_time = 0
+        casing_time = 0
 
+        for item in casing_on_uid:
+            casing_time = (item.end_time-item.start_time).total_seconds()/3600 + casing_time
 
         for item in trip_in_on_uid:
-            try:
-                bha = Bha.objects.get(id=item.bha_id)
-            except:
-                bha = None
-
-            try:
-                interval = Interval.objects.get(id=item.interval_id)
-            except:
-                interval =None
-            
-            bha_depth = min(item.depth/10, 1000)
-            if bha:
-                if bha.bha_length:
-                    bha_depth =bha.bha_length
-
-            try:
-                trip_in_time = (item.end_time-item.bha_time).total_seconds()/3600 + trip_in_time
-            except:
-                trip_in_time = (item.end_time-item.start_time).total_seconds()/3600 + trip_in_time
+            trip_in_time = (item.end_time-item.start_time).total_seconds()/3600 + trip_in_time
 
 
         for item in trip_out_on_uid:
-            try:
-                bha = Bha.objects.get(id=item.bha_id)
-            except:
-                bha = None
-
-            try:
-                interval = Interval.objects.get(id=item.interval_id)
-            except:
-                interval =None
-
-            bha_depth = min(item.depth/10, 1000)
-            if bha:
-                if bha.bha_length:
-                    bha_depth =bha.bha_length
-
-            try:
-                trip_out_time =(item.bha_time-item.start_time).total_seconds()/3600 + trip_out_time
-            except:
-                trip_out_time = (item.end_time-item.start_time).total_seconds()/3600 + trip_out_time
+            trip_out_time = (item.end_time-item.start_time).total_seconds()/3600 + trip_out_time
 
 
         trip_in_time = round(trip_in_time +.1,1)
         trip_out_time = round(trip_out_time +.1,1)
-        casing_time =  round((prod_casing_time + int_casing_time + surface_casing_time)+.1,1)
+        casing_time =  round((casing_time)+.1,1)
         tripping_time =  round((trip_in_time+ trip_out_time + casing_time+.1),1)
         und_time = round((float(total_well_time)-float(drill_time) - float(tripping_time) - float(cxn_time)- float(circ_time)- float(idle_time)-.15),1)
 
-        hours.append(tripping_time)
-        level.append("Tripping")
-        upper_level.append("Total Well")
-        
-        hours.append(casing_time)
-        level.append("Casing")
-        upper_level.append("Tripping")
 
-        hours.append(trip_in_time)
-        level.append("Tripping In")
-        upper_level.append("Tripping")
-
-    
-        hours.append(trip_out_time )
-        level.append("Tripping Out")
-        upper_level.append("Tripping")
-
-
-
-        interval = Interval.objects.filter(job=obj.job)
-        for item in interval:
-            drilled_on_int = EDRDrilled.objects.filter(uid=obj,edr_raw__hole_depth__gte=item.start_depth, edr_raw__hole_depth__lte=item.end_depth)
-            slide_on_int = EDRDrilled.objects.filter(uid=obj, slide_count__gt=0, edr_raw__hole_depth__gte=item.start_depth, edr_raw__hole_depth__lte=item.end_depth)
-  
 
         rigstates = {
             "slide": slide_time,
