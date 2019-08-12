@@ -258,7 +258,7 @@ class WellOverviewSerializer(serializers.ModelSerializer):
 
     def get_surface(self, obj):
 
-        s_interval_name=s_holesize=s_hole_depth_start=s_hole_depth_end =0
+        s_interval_name=s_holesize=s_hole_depth_start=s_hole_depth_end =s_casingsize=0
         s_dt_start= s_dt_end =s_total_hours =s_drill_hours =s_svy_inc_start =s_svy_inc_end =s_rop_avg =0
 
         #sliding parameters
@@ -280,6 +280,7 @@ class WellOverviewSerializer(serializers.ModelSerializer):
         if(surface_on_uid):
             s_interval_name = surface_on_uid.name
             s_holesize = surface_on_uid.hole_size
+            s_casingsize = surface_on_uid.casing_size
             s_hole_depth_start = surface_on_uid.start_depth
             s_hole_depth_end = surface_on_uid.end_depth
 
@@ -329,6 +330,7 @@ class WellOverviewSerializer(serializers.ModelSerializer):
         surface = {
             "interval_name": s_interval_name,
             "holesize": s_holesize,
+            "casing_size": s_casingsize,
             "hole_depth_start": s_hole_depth_start,
             "hole_depth_end": s_hole_depth_end,
 
@@ -373,7 +375,7 @@ class WellOverviewSerializer(serializers.ModelSerializer):
 
     def get_intermediate(self, obj):
 
-        I1_interval_name = I1_holesize = I1_hole_depth_start = I1_hole_depth_end = 0
+        I1_interval_name = I1_holesize = I1_hole_depth_start = I1_hole_depth_end =I1_casingsize= 0
         I1_dt_start = I1_dt_end = I1_total_hours = I1_drill_hours = I1_svy_inc_start = I1_svy_inc_end = I1_rop_avg = 0
 
         #sliding parameters
@@ -395,6 +397,7 @@ class WellOverviewSerializer(serializers.ModelSerializer):
         if(intermediate_on_uid):
             I1_interval_name = intermediate_on_uid.name
             I1_holesize = intermediate_on_uid.hole_size
+            I1_casingsize = intermediate_on_uid.casing_size
             I1_hole_depth_start = intermediate_on_uid.start_depth
             I1_hole_depth_end = intermediate_on_uid.end_depth
 
@@ -445,6 +448,7 @@ class WellOverviewSerializer(serializers.ModelSerializer):
         intermediate = {
             "interval_name": I1_interval_name,
             "holesize": I1_holesize,
+            "casing_size": I1_casingsize,
             "hole_depth_start": I1_hole_depth_start,
             "hole_depth_end": I1_hole_depth_end,
 
@@ -488,7 +492,7 @@ class WellOverviewSerializer(serializers.ModelSerializer):
 
     def get_curve(self, obj):
 
-        c_interval_name = c_holesize = c_hole_depth_start = c_hole_depth_end = 0
+        c_interval_name = c_holesize = c_hole_depth_start = c_hole_depth_end =c_casingsize= 0
         c_dt_start= c_dt_end =c_total_hours =c_drill_hours =c_svy_inc_start =c_svy_inc_end =c_rop_avg =0
 
         #sliding parameters
@@ -498,7 +502,7 @@ class WellOverviewSerializer(serializers.ModelSerializer):
 
         #rotating parameters
         c_rotating_footage=c_rotate_pct_d=c_rotate_pct_t=c_rop_avg_rotating=c_wob_avg_rotating=0
-        c_top_drive_rpm_avg_rotating=c_bit_rpm_avg_rotating=c_flow_rate_avg_rotating=0
+        c_top_drive_rpm_avg_rotating=c_bit_rpm_avg_rotating=c_flow_rate_avg_rotating=c_tfe=0
         c_diff_pressure_avg_rotating=c_pump_pressure_avg_rotating=c_top_drive_torque_avg_rotating=0
 
 
@@ -510,6 +514,7 @@ class WellOverviewSerializer(serializers.ModelSerializer):
         if(curve_on_uid):
             c_interval_name = curve_on_uid.name
             c_holesize = curve_on_uid.hole_size
+            c_casingsize = curve_on_uid.casing_size
             c_hole_depth_start = curve_on_uid.start_depth
             c_hole_depth_end = curve_on_uid.end_depth
 
@@ -526,7 +531,7 @@ class WellOverviewSerializer(serializers.ModelSerializer):
             c_rop_avg = drilled_aggregate.get('rop_a__avg')
       
             #sliding parameters
-            sliding_aggregate = slide_on_uid.aggregate(Sum("drilled_ft"), Avg("rop_a"), Avg("edr_raw__wob"), Avg("edr_raw__td_rpm"), Avg("bit_rpm"), Avg("edr_raw__flow_in"), 
+            sliding_aggregate = slide_on_uid.aggregate(Sum("slide_value_tf"),Sum("drilled_ft"), Avg("rop_a"), Avg("edr_raw__wob"), Avg("edr_raw__td_rpm"), Avg("bit_rpm"), Avg("edr_raw__flow_in"), 
                                                         Avg("edr_raw__diff_press"), Avg("edr_raw__pump_press"), Avg("edr_raw__td_torque"))
 
             c_sliding_footage = sliding_aggregate.get('drilled_ft__sum') if sliding_aggregate.get('drilled_ft__sum') and sliding_aggregate.get('drilled_ft__sum') > 0 else 0
@@ -540,7 +545,7 @@ class WellOverviewSerializer(serializers.ModelSerializer):
             c_diff_pressure_avg_sliding = sliding_aggregate.get('edr_raw__diff_press__avg')
             c_pump_pressure_avg_sliding = sliding_aggregate.get('edr_raw__pump_press__avg')
             c_top_drive_torque_avg_sliding = sliding_aggregate.get('edr_raw__td_torque__avg')
-
+            c_tfe = sliding_aggregate.get('slide_value_tf__sum')/c_sliding_footage*100
             #rotating parameters
             rotating_aggregate = rotate_on_uid.aggregate(Avg("rop_a"), Avg("edr_raw__wob"), Avg("edr_raw__td_rpm"), Avg("bit_rpm"), Avg("edr_raw__flow_in"), 
                                                         Avg("edr_raw__diff_press"), Avg("edr_raw__pump_press"), Avg("edr_raw__td_torque"))
@@ -559,6 +564,7 @@ class WellOverviewSerializer(serializers.ModelSerializer):
         curve = {
             "interval_name": c_interval_name,
             "holesize": c_holesize,
+            "casing_size": c_casingsize,
             "hole_depth_start": c_hole_depth_start,
             "hole_depth_end": c_hole_depth_end,
 
@@ -583,7 +589,7 @@ class WellOverviewSerializer(serializers.ModelSerializer):
             "diff_pressure_avg_sliding": c_diff_pressure_avg_sliding,
             "pump_pressure_avg_sliding": c_pump_pressure_avg_sliding,
             "top_drive_torque_avg_sliding": c_top_drive_torque_avg_sliding,
-
+            "tool_face_effeciency": c_tfe,
             #Rotating parameters
             "rotating_footage": c_rotating_footage,
             "rotate_pct_d": c_rotate_pct_d,
@@ -602,7 +608,7 @@ class WellOverviewSerializer(serializers.ModelSerializer):
 
     def get_lateral(self, obj):
 
-        l_interval_name=l_holesize=l_hole_depth_start=l_hole_depth_end =0
+        l_interval_name=l_holesize=l_hole_depth_start=l_hole_depth_end =l_casingsize=0
         l_dt_start= l_dt_end =l_total_hours =l_drill_hours =l_svy_inc_start =l_svy_inc_end =l_rop_avg =0
 
         #sliding parameters
@@ -624,6 +630,7 @@ class WellOverviewSerializer(serializers.ModelSerializer):
         if(lateral_on_uid):
             l_interval_name=lateral_on_uid.name
             l_holesize=lateral_on_uid.hole_size
+            l_casingsize = lateral_on_uid.casing_size
             l_hole_depth_start=lateral_on_uid.start_depth
             l_hole_depth_end =lateral_on_uid.end_depth
 
@@ -672,6 +679,7 @@ class WellOverviewSerializer(serializers.ModelSerializer):
         lateral = {
             "interval_name": l_interval_name,
             "holesize": l_holesize,
+            "casing_size": l_casingsize,
             "hole_depth_start": l_hole_depth_start,
             "hole_depth_end": l_hole_depth_end,
 
@@ -715,7 +723,7 @@ class WellOverviewSerializer(serializers.ModelSerializer):
 
     def get_tangent(self, obj):
 
-        t_interval_name=t_holesize=t_hole_depth_start=t_hole_depth_end =0
+        t_interval_name=t_holesize=t_hole_depth_start=t_hole_depth_end =t_casingsize=0
         t_dt_start= t_dt_end =t_total_hours =t_drill_hours =t_svy_inc_start =t_svy_inc_end =t_rop_avg =0
 
         #sliding parameters
@@ -736,6 +744,7 @@ class WellOverviewSerializer(serializers.ModelSerializer):
         if(tangent_on_uid):
             t_interval_name=tangent_on_uid.name
             t_holesize=tangent_on_uid.hole_size
+            t_casingsize = tangent_on_uid.casing_size
             t_hole_depth_start=tangent_on_uid.start_depth
             t_hole_depth_end =tangent_on_uid.end_depth
 
@@ -784,6 +793,7 @@ class WellOverviewSerializer(serializers.ModelSerializer):
         tangent = {
             "interval_name": t_interval_name,
             "holesize": t_holesize,
+            "casing_size": t_casingsize,
             "hole_depth_start": t_hole_depth_start,
             "hole_depth_end": t_hole_depth_end,
 
@@ -827,7 +837,7 @@ class WellOverviewSerializer(serializers.ModelSerializer):
 
     def get_intermediate2(self, obj):
 
-        I2_interval_name=I2_holesize=I2_hole_depth_start=I2_hole_depth_end =0
+        I2_interval_name=I2_holesize=I2_hole_depth_start=I2_hole_depth_end =I2_casingsize=0
         I2_dt_start= I2_dt_end =I2_total_hours =I2_drill_hours =I2_svy_inc_start =I2_svy_inc_end =I2_rop_avg =0
 
         #sliding parameters
@@ -850,6 +860,7 @@ class WellOverviewSerializer(serializers.ModelSerializer):
         if(intermediate2_on_uid):
             I2_interval_name=intermediate2_on_uid.name
             I2_holesize=intermediate2_on_uid.hole_size
+            I2_casingsize = intermediate2_on_uid.casing_size
             I2_hole_depth_start=intermediate2_on_uid.start_depth
             I2_hole_depth_end =intermediate2_on_uid.end_depth
 
@@ -898,6 +909,7 @@ class WellOverviewSerializer(serializers.ModelSerializer):
         intermediate2 = {
             "interval_name": I2_interval_name,
             "holesize": I2_holesize,
+            "casing_size": I2_casingsize,
             "hole_depth_start": I2_hole_depth_start,
             "hole_depth_end": I2_hole_depth_end,
 
@@ -941,7 +953,7 @@ class WellOverviewSerializer(serializers.ModelSerializer):
 
     def get_intermediate3(self, obj):
 
-        I3_interval_name=I3_holesize=I3_hole_depth_start=I3_hole_depth_end =0
+        I3_interval_name=I3_holesize=I3_hole_depth_start=I3_hole_depth_end =I3_casingsize=0
         I3_dt_start= I3_dt_end =I3_total_hours =I3_drill_hours =I3_svy_inc_start =I3_svy_inc_end =I3_rop_avg =0
 
         #sliding parameters
@@ -963,6 +975,7 @@ class WellOverviewSerializer(serializers.ModelSerializer):
         if(intermediate3_on_uid):
             I3_interval_name=intermediate3_on_uid.name
             I3_holesize=intermediate3_on_uid.hole_size
+            I3_casingsize = intermediate3_on_uid.casing_size
             I3_hole_depth_start=intermediate3_on_uid.start_depth
             I3_hole_depth_end =intermediate3_on_uid.end_depth
 
@@ -1011,6 +1024,7 @@ class WellOverviewSerializer(serializers.ModelSerializer):
         intermediate3 = {
             "interval_name": I3_interval_name,
             "holesize": I3_holesize,
+            "casing_size": I3_casingsize,
             "hole_depth_start": I3_hole_depth_start,
             "hole_depth_end": I3_hole_depth_end,
 
@@ -1054,7 +1068,7 @@ class WellOverviewSerializer(serializers.ModelSerializer):
 
     def get_intermediate4(self, obj):
 
-        I4_interval_name=I4_holesize=I4_hole_depth_start=I4_hole_depth_end =0
+        I4_interval_name=I4_holesize=I4_hole_depth_start=I4_hole_depth_end=I4_casingsize=0
         I4_dt_start= I4_dt_end =I4_total_hours =I4_drill_hours =I4_svy_inc_start =I4_svy_inc_end =I4_rop_avg =0
 
         #sliding parameters
@@ -1076,6 +1090,7 @@ class WellOverviewSerializer(serializers.ModelSerializer):
         if(intermediate4_on_uid):
             I4_interval_name=intermediate4_on_uid.name
             I4_holesize=intermediate4_on_uid.hole_size
+            I4_casingsize= intermediate4_on_uid.casing_size
             I4_hole_depth_start=intermediate4_on_uid.start_depth
             I4_hole_depth_end =intermediate4_on_uid.end_depth
 
@@ -1124,6 +1139,7 @@ class WellOverviewSerializer(serializers.ModelSerializer):
         intermediate4 = {
             "interval_name": I4_interval_name,
             "holesize": I4_holesize,
+            "casing_size": I4_casingsize,
             "hole_depth_start": I4_hole_depth_start,
             "hole_depth_end": I4_hole_depth_end,
 
